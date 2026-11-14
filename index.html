@@ -284,6 +284,108 @@ svg.g.flame{color:var(--org);width:20px;height:20px} svg.g.gold,.ico.gold{color:
 .teaser{display:flex;align-items:center;gap:6px}
 .toast{width:max-content;max-width:calc(100vw - 32px)}
 .wk-clock .t{font-weight:800;letter-spacing:-1.5px}
+
+/* ===== unslop : gris sidéral (d'après unslop de Damir Sokolovsky, @heydamir, CC BY 4.0) ===== */
+:root{
+  --bg:#F5F5F6; --card:#FFFFFF; --card2:#F0F0F2; --line:rgba(23,23,23,.08);
+  --txt:#171717; --sec:#525252; --mut:#6E6E73;
+  --pri:#1C1C1E; --on-pri:#FFFFFF; --acc:#2F6FDB; --accbg:#EEF3FC;
+  --lime:#16A34A; --red:#DC2626; --org:#B45309; --orgbg:#FBF3E8; --redbg:#FCEDED; --okbg:#EAF6EE;
+  --fig:#D4D4D8; --navbg:rgba(245,245,246,.9); --glow:none;
+  --shadow:0 1px 2px rgba(0,0,0,.05);
+  --mono:ui-monospace,"SF Mono",SFMono-Regular,Menlo,monospace;
+  --ease:cubic-bezier(.22,1,.36,1);
+}
+@media (prefers-color-scheme: dark){
+  :root{
+    --bg:#121314; --card:#1A1B1D; --card2:#232427; --line:rgba(237,237,239,.08);
+    --txt:#EDEDEF; --sec:#A1A1A6; --mut:#8A8A90;
+    --pri:#E8E8EA; --on-pri:#141415; --acc:#4C8DF6; --accbg:#16202F;
+    --lime:#4CC38A; --red:#E5484D; --org:#E0A04A; --orgbg:#272015; --redbg:#2A1717; --okbg:#14251C;
+    --fig:#3A3B3F; --navbg:rgba(18,19,20,.9); --shadow:none;
+  }
+}
+/* boutons : gris clair (nuit) / graphite (jour), plus de lueur */
+.btn.main{background:var(--pri);color:var(--on-pri);box-shadow:inset 0 1px 0 rgba(255,255,255,.12)}
+.btn.main:active{background:var(--pri);opacity:.88}
+.btn{border-radius:12px;font-weight:600}
+.btn.sm{border-radius:10px}
+.btn.ghost{background:var(--card2);border:1px solid var(--line);box-shadow:none}
+.btn-end{background:var(--pri);color:var(--on-pri);border-radius:10px;font-weight:600}
+.timer{border:1px solid var(--line);box-shadow:0 8px 24px rgba(0,0,0,.18)}
+.timer .p30{background:var(--pri);color:var(--on-pri);border-radius:8px}
+.timer .x{border-radius:8px}
+/* sélection : surface claire, pas de pilule bleue */
+.tab{border-radius:10px;box-shadow:none;border:1px solid var(--line);background:var(--card);font-weight:500}
+.tab.on{background:var(--pri);color:var(--on-pri);border-color:transparent;box-shadow:none}
+.chip{border-radius:8px;font-weight:500}
+.chip.on{background:var(--pri);color:var(--on-pri)}
+.seg button{border-radius:8px;font-weight:500}
+.seg button.on{background:var(--pri);color:var(--on-pri)}
+.pls span{border-radius:6px;font-weight:500;color:var(--sec);background:var(--card2)}
+.badge{border-radius:6px;background:var(--card2);color:var(--sec)}
+.badge.lime{background:var(--okbg);color:var(--lime)}
+.badge.red{background:var(--redbg);color:var(--red)}
+.circ{border-width:1.5px}
+.circ.on{background:var(--pri);border-color:var(--pri);color:var(--on-pri);box-shadow:none}
+.prog i{background:var(--pri)}
+.nav button.on{color:var(--txt)}
+.cal span{border-radius:8px}
+.cal span.on{background:var(--pri);color:var(--on-pri);font-weight:600}
+.cal span.today{outline:1.5px solid var(--mut)}
+.bars div{border-radius:4px 4px 2px 2px;background:var(--card2)}
+.bars div.ok,.bars div.has{background:var(--fig);opacity:1}
+.bars div.cur{background:var(--acc)}
+.bars span{font-family:var(--mono)}
+/* séries validées : calmes */
+.set.done{background:transparent}
+.set.done .stp{border-color:var(--line);opacity:.75}
+.set.done .chk{background:var(--pri);border-color:var(--pri);color:var(--on-pri);box-shadow:none;animation:none}
+.chk{border-width:1.5px}
+.set.hit .idx{color:var(--lime)}
+.done-ic{background:var(--card2);border-color:var(--line);color:var(--lime)}
+.feel button{border-radius:10px;color:var(--mut);border:1px solid var(--line);background:var(--card2)}
+.feel button.on{background:var(--card);color:var(--txt)}
+.feel .easy.on{color:var(--lime);border-color:var(--lime)} .feel .ok.on{color:var(--acc);border-color:var(--acc)} .feel .hard.on{color:var(--org);border-color:var(--org)} .feel .pain.on{color:var(--red);border-color:var(--red)}
+/* typo : hiérarchie par la taille, plus par la graisse */
+.wk-big,.wt-big{font-weight:500;letter-spacing:-.02em}
+.plan-title,.page-title h1,.hero,.done-hero .t{font-weight:600;letter-spacing:-.01em}
+.exname{font-weight:500}
+.wk-clock .t{font-weight:500;letter-spacing:-.02em}
+.stat .v{font-weight:500}
+.best .v,.mini-v{font-weight:500}
+.next-title{font-weight:600}
+.wk-lbl,.plan-sub,.exsub,.last,.small.mut{color:var(--sec)}
+.teaser{color:var(--sec);font-weight:500}
+.streak-row{font-weight:500}
+svg.g.flame{color:var(--mut)}
+.ssdiv{color:var(--sec)}
+.tg-mini.goal{color:var(--acc)}
+/* signature : chiffres gravés comme sur un disque de fonte */
+.stp input,.wk-clock .t,.timer .t,.plates b,.last,.mini-card .exsub,.stepper .v{font-family:var(--mono);font-variant-numeric:tabular-nums}
+.addset svg.g{color:var(--mut)}
+.stp input{font-weight:500;font-size:17px}
+.wk-clock .t{font-size:38px}
+/* cartes de stats : des chiffres, pas d'icônes */
+.stat .ico{display:none}
+.stat{text-align:left}
+.stat .l{margin-top:0}
+.done-hero .ring{border:2px solid var(--line);color:var(--txt);box-shadow:none;background:var(--card)}
+.toast{border-radius:12px}
+.toast.pr{background:var(--card);color:var(--txt);border:1px solid var(--line)}
+.toast.pr svg{color:#C99A2E}
+.target{border-radius:12px}
+.card.due{box-shadow:inset 0 0 0 1px var(--acc)}
+.more{border-radius:8px;color:var(--sec)}
+.editbtn{border-radius:8px}
+.setup{border-radius:8px}
+/* mouvement : une seule courbe, pas de rebond */
+.btn,.tab,.chip,.chk,.stp button,.feel button,.seg button,.prow,.list-item,.stepper button,.circ{transition:transform .14s var(--ease),background-color .16s var(--ease),opacity .16s var(--ease),color .16s var(--ease)}
+.btn:active,.tab:active,.chip:active,.feel button:active,.seg button:active,.stepper button:active{transform:scale(.97)}
+.chk:active{transform:scale(.94)}
+@keyframes pop{0%{transform:translate(-50%,-8px);opacity:0}100%{transform:translate(-50%,0);opacity:1}}
+.toast{animation:pop .3s var(--ease)}
+@media (prefers-color-scheme: light){ .card,.stat{border:1px solid var(--line);box-shadow:none} }
 </style>
 </head>
 <body>
@@ -509,7 +611,7 @@ function targetText(ex, tg){
   if(tg.type === "routine") return `${G("timer")}<span>${ex.min} minutes, coche quand c'est fait</span>`;
   if(tg.type === "deload") return `${G("clock")}<span>Décharge : mêmes charges, 2 à 3 reps en réserve</span>`;
   if(tg.type === "first") return `${G("plusc")}<span>Première fois : trouve une charge où tu finis à 2–3 reps de l'échec</span>`;
-  const reps = tg.sets.map(s => s.r + u).join(" · ");
+  const reps = tg.sets.map(s => s.r + u).join(" / ");
   const w = tg.sets[0].w;
   if(tg.type === "load") return `${G("flame")}<span>Tu montes à <b>${fmt(w)} kg</b>, vise ${ex.min} reps ou plus</span>`;
   if(tg.type === "hold") return `${G("alert")}<span>Douleur la dernière fois : même charge (${w ? fmt(w)+" kg" : "poids du corps"}), technique d'abord</span>`;
@@ -1004,7 +1106,7 @@ function renderWorkout(){
       ${e.variants ? `<div class="seg">${e.variants.map((v,i) => `<button class="${i===e.vi?"on":""}" data-a="variant" data-e="${ei}" data-v="${i}">${esc(v.name)}</button>`).join("")}</div>` : ""}
       <button class="setup ${e.setup ? "" : "empty"}" data-a="setup" data-e="${ei}">${IC.gear}<span>${e.setup ? esc(e.setup) : "Noter mon réglage (siège, prise…)"}</span></button>
       ${e.note ? `<div class="ex-note">${esc(e.note)}</div>` : ""}
-      ${last ? `<div class="last">Dernière fois : ${last.sets.map(s => (s.w ? fmt(s.w)+" × " : "") + s.r + u).join(" · ")} <span class="mut small">(${dateFr(last.date)})</span></div>` : ""}
+      ${last ? `<div class="last">Dernière fois : ${last.sets.map(s => (s.w ? fmt(s.w)+" × " : "") + s.r + u).join(" / ")} <span class="mut small">(${dateFr(last.date)})</span></div>` : ""}
       <div class="target ${e.target.type}">${targetText(e, e.target)}</div>
       ${e.unit === "routine" ? `<div class="sets">${e.sets.map((s, si) => `<div class="set ${s.done?"done":""}" style="grid-template-columns:22px 1fr 40px"><div class="idx">${G("timer")}</div>
           <div class="stp"><button data-a="st" data-e="${ei}" data-s="${si}" data-f="r" data-d="-1">−</button><input inputmode="numeric" data-in="r" data-e="${ei}" data-s="${si}" value="${s.r}"><span class="mut small" style="margin-right:6px">min</span><button data-a="st" data-e="${ei}" data-s="${si}" data-f="r" data-d="1">+</button></div>
@@ -1062,7 +1164,7 @@ function renderProgress(){
     <div class="sec-title">Calendrier</div>${calendar()}
     ${(() => { const mm = []; let m = monthOf(dayKey(Date.now())); for(let i=0;i<12;i++){ const a = monthAvg(m); if(a) mm.unshift({v:a.avg, d:keyTs(m + "-01")}); m = prevMonthKey(m); } return mm.length > 1 ? `<div class="sec-title">Poids (par mois)</div><div class="card">${lineChart(mm, "kg")}</div>` : ""; })()}
     <div class="sec-title">Séances par semaine</div>
-    <div class="card"><div class="bars">${weeks.map(w => `<div class="${w.n>=goal?"ok":w.n?"has":""}" style="height:${Math.max(5, w.n/maxN*100)}%"><span>S${weekNum(w.ws)}</span></div>`).join("")}</div></div>`;
+    <div class="card"><div class="bars">${weeks.map((w,i) => `<div class="${w.n>=goal?"ok":w.n?"has":""}${i===weeks.length-1?" cur":""}" style="height:${Math.max(5, w.n/maxN*100)}%"><span>S${weekNum(w.ws)}</span></div>`).join("")}</div></div>`;
 
   const exs = allExercises();
   if(!S.progEx || !exs.some(e => e.id === S.progEx)){ const withH = exs.find(e => history(e.id).length); S.progEx = (withH || exs[0]).id; }
@@ -1080,7 +1182,7 @@ function renderProgress(){
       <div class="sec-title">Progression (${isSec?"temps":"1RM estimé"})</div>
       <div class="card">${lineChart(pts, isSec?"s":"kg")}</div>
       <div class="sec-title">Dernières séances</div>
-      <div class="card">${hist.slice(0,8).map(e => `<div class="list-item"><span class="small">${dayFr(e.date)}</span><span class="small mut" style="text-align:right">${e.sets.map(s => (s.w?fmt(s.w)+"×":"") + s.r + (isSec?"s":"")).join(" · ")}</span></div>`).join("")}</div>`;
+      <div class="card">${hist.slice(0,8).map(e => `<div class="list-item"><span class="small">${dayFr(e.date)}</span><span class="small mut" style="text-align:right">${e.sets.map(s => (s.w?fmt(s.w)+"×":"") + s.r + (isSec?"s":"")).join(" / ")}</span></div>`).join("")}</div>`;
   } else h += `<div class="card mut small">Pas encore de données sur cet exercice.</div>`;
   return h;
 }
@@ -1167,7 +1269,7 @@ function renderLayer(){
       h += `<div class="ov" data-a="closemodal"><div class="sheet" data-stop="1"><div class="hero">${esc(s.dayName)}</div>
         <div class="mut small" style="margin-bottom:12px">${dayFr(s.date)} · ${s.durationMin||"?"} min · ${s.goalsTotal ? s.goalsHit+"/"+s.goalsTotal+" objectifs" : ""}</div>
         ${s.entries.map(e => `<div class="list-item"><span style="font-weight:600;font-size:14px">${esc(e.name)}${e.feel==="pain"?' <span class="badge red">douleur</span>':""}</span>
-          <span class="small mut" style="text-align:right">${e.sets.map(x => (x.w?fmt(x.w)+"×":"") + x.r + (e.unit==="sec"?"s":"")).join(" · ")}</span></div>`).join("")}
+          <span class="small mut" style="text-align:right">${e.sets.map(x => (x.w?fmt(x.w)+"×":"") + x.r + (e.unit==="sec"?"s":"")).join(" / ")}</span></div>`).join("")}
         <button class="btn ${S.confirm==="del"?"danger":"ghost"} sm" style="margin-top:16px" data-a="delsession">${S.confirm==="del" ? "Confirmer la suppression" : "Supprimer cette séance"}</button>
         <button class="btn main sm" style="margin-top:8px" data-a="closemodal">Fermer</button></div></div>`;
     }
