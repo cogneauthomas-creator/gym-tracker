@@ -233,6 +233,7 @@ body.has-start #app{padding-bottom:calc(170px + env(safe-area-inset-bottom))}
 .plates b{color:var(--txt)}
 .setlinks{gap:6px}
 .addset svg.g{width:16px;height:16px;color:var(--org)}
+.card.due{box-shadow:inset 0 0 0 1.5px var(--acc)}
 .wt-top{display:flex;justify-content:space-between;align-items:flex-start}
 .wt-big{font-size:32px;font-weight:800;letter-spacing:-1px;margin-top:4px}
 .wt-big .of{font-size:18px;color:var(--mut);font-weight:600}
@@ -915,24 +916,35 @@ function renderHome(){
 
 const dayKey = ts => { const d = new Date(ts); return d.getFullYear() + "-" + String(d.getMonth()+1).padStart(2,"0") + "-" + String(d.getDate()).padStart(2,"0"); };
 const keyTs = k => { const [y,m,dd] = k.split("-").map(Number); return new Date(y, m-1, dd, 12).getTime(); };
-function weekAvg(ws){ const xs = S.weights.filter(x => weekStart(keyTs(x.d)) === ws).map(x => x.w); return xs.length ? {avg: xs.reduce((a,b) => a+b, 0)/xs.length, n: xs.length} : null; }
-function weightCard(){
+const monthOf = k => k.slice(0,7);
+function monthAvg(mk){ const xs = S.weights.filter(x => monthOf(x.d) === mk).map(x => x.w); return xs.length ? {avg: xs.reduce((p,q) => p+q, 0)/xs.length, n: xs.length} : null; }
+function prevMonthKey(mk){ let [y,m] = mk.split("-").map(Number); m--; if(m === 0){ m = 12; y--; } return y + "-" + String(m).padStart(2,"0"); }
+function weighDue(){ const today = dayKey(Date.now()); return !monthAvg(monthOf(today)) && new Date(Date.now()).getDate() <= 10; }
+function weighBlock(compact){
   const today = dayKey(Date.now()), tw = S.weights.find(x => x.d === today);
   const lastW = S.weights.length ? S.weights[S.weights.length-1].w : 74;
   if(S.wDraft == null) S.wDraft = tw ? tw.w : lastW;
-  const ws = weekStart(Date.now()), cur = weekAvg(ws), prev = weekAvg(prevWeek(ws));
-  let msg = "Pèse-toi le matin à jeun, au moins 3 fois par semaine.";
-  if(cur && prev && cur.n >= 3 && prev.n >= 3){
+  return `<div class="wt-row"><div class="stepper"><button data-a="wstep" data-v="-0.1">−</button><span class="v num" style="min-width:64px">${fmt(Math.round(S.wDraft*10)/10)} kg</span><button data-a="wstep" data-v="0.1">+</button></div>
+      <button class="btn ${tw ? "ghost" : "main"} sm" style="width:auto;padding:0 18px" data-a="wsave">${tw ? "Pesé " + IC.check : "Enregistrer"}</button></div>`;
+}
+function weightCard(){
+  const mk = monthOf(dayKey(Date.now())), cur = monthAvg(mk), prev = monthAvg(prevMonthKey(mk));
+  const last = S.weights[S.weights.length-1];
+  const months = []; let m = mk; for(let i=0;i<8;i++){ const a = monthAvg(m); if(a) months.unshift(a.avg); m = prevMonthKey(m); }
+  const due = weighDue();
+  let msg;
+  if(cur && prev){
     const dlt = cur.avg - prev.avg;
-    msg = `<b>${dlt >= 0 ? "+" : ""}${fmt(Math.round(dlt*10)/10)} kg</b> vs la semaine dernière. ` + (dlt < 0.2 ? "Un peu lent : si ça dure 2 semaines, ajoute 150 à 200 kcal." : dlt > 0.5 ? "Un peu rapide : si ça dure 2 semaines, retire 150 kcal." : "Rythme parfait pour une prise de masse propre.");
-  } else if(cur) msg = `Moyenne sur ${cur.n} pesée${cur.n > 1 ? "s" : ""}. La comparaison arrive avec 3 pesées sur 2 semaines.`;
-  const weeks = []; let w = ws; for(let i=0;i<8;i++){ const a = weekAvg(w); if(a) weeks.unshift(a.avg); w = prevWeek(w); }
-  return `<div class="card"><div class="wt-top"><div><div class="wk-lbl">Poids</div>
-      <div class="wt-big num">${cur ? fmt(Math.round(cur.avg*10)/10) : "—"} <span class="of">kg</span></div><div class="mut small">moyenne de la semaine</div></div>
-      ${weeks.length > 1 ? sparkline(weeks) : ""}</div>
-    <div class="wt-row"><div class="stepper"><button data-a="wstep" data-v="-0.1">−</button><span class="v num" style="min-width:64px">${fmt(Math.round(S.wDraft*10)/10)} kg</span><button data-a="wstep" data-v="0.1">+</button></div>
-      <button class="btn ${tw ? "ghost" : "main"} sm" style="width:auto;padding:0 18px" data-a="wsave">${tw ? "Pesé " + IC.check : "Enregistrer"}</button></div>
-    <div class="small" style="margin-top:12px">${msg}</div></div>`;
+    msg = `<b>${dlt >= 0 ? "+" : ""}${fmt(Math.round(dlt*10)/10)} kg</b> depuis le mois dernier. ` + (dlt < 0.8 ? "Un peu lent : ajoute 150 à 200 kcal par jour." : dlt > 2 ? "Un peu rapide : retire 150 kcal par jour pour limiter le gras." : "Rythme parfait pour une prise de masse propre (1 à 1,6 kg par mois).");
+  } else if(cur) msg = "Pesée du mois enregistrée. La comparaison arrive avec ta pesée du mois prochain.";
+  else msg = due ? "C'est le début du mois : pèse-toi à la salle avant ta séance, toujours dans les mêmes conditions." : `Prochaine pesée : début ${new Date(new Date(Date.now()).getFullYear(), new Date(Date.now()).getMonth()+1, 1).toLocaleDateString("fr-BE",{month:"long"})}.`;
+  return `<div class="card ${due ? "due" : ""}"><div class="wt-top"><div><div class="wk-lbl">Poids${due ? ' <span class="badge">Pesée du mois</span>' : ""}</div>
+      <div class="wt-big num">${last ? fmt(last.w) : "—"} <span class="of">kg</span></div><div class="mut small">${last ? "pesé le " + new Date(keyTs(last.d)).toLocaleDateString("fr-BE",{day:"numeric", month:"long"}) : "aucune pesée pour l'instant"}</div></div>
+      ${months.length > 1 ? sparkline(months) : ""}</div>
+    ${due || cur && S.weights.some(x => x.d === dayKey(Date.now())) ? weighBlock() : ""}
+    <div class="small" style="margin-top:12px">${msg}</div>
+    ${!due && !S.weights.some(x => x.d === dayKey(Date.now())) ? `<button class="addset" data-a="wopen" style="margin-top:4px;color:var(--acc)">${IC.plus} Ajouter une pesée</button>` : ""}
+    ${S.wOpen && !due ? weighBlock() : ""}</div>`;
 }
 function sparkline(vals){
   const W = 110, H = 40, mn = Math.min(...vals), mx = Math.max(...vals), rg = (mx - mn) || 1;
@@ -967,6 +979,7 @@ function renderWorkout(){
       <button class="btn-end" data-a="finish">Terminer</button></div>
     <div class="wk-clock"><span class="t" id="clock">${hms((Date.now()-d.start)/1000)}</span><span class="s">${done} / ${total} séries</span></div>
     <div class="prog"><i style="width:${total ? done/total*100 : 0}%"></i></div></div>`;
+  if(weighDue()) h += `<div class="card due"><div class="mini-h">${G("clock","blue")}Pesée du mois</div><div class="small mut">Tu es à la salle : pèse-toi avant de commencer, ça prend 10 secondes.</div>${weighBlock()}</div>`;
   d.entries.forEach((e, ei) => {
     const last = history(e.exId)[0];
     const u = e.unit === "sec" ? "s" : e.unit === "routine" ? " min" : "";
@@ -1047,7 +1060,7 @@ function renderProgress(){
       <div class="stat"><div class="ico blue">${G("dumbbell")}</div><div class="l">Séances au total</div><div class="v">${real}</div></div>
       <div class="stat"><div class="ico gold">${G("star")}</div><div class="l">Records (30 j)</div><div class="v">${monthPR}</div></div></div>
     <div class="sec-title">Calendrier</div>${calendar()}
-    ${(() => { const wk = []; let w = weekStart(Date.now()); for(let i=0;i<12;i++){ const a = weekAvg(w); if(a) wk.unshift({v:a.avg, d:w}); w = prevWeek(w); } return wk.length > 1 ? `<div class="sec-title">Poids (moyenne par semaine)</div><div class="card">${lineChart(wk, "kg")}</div>` : ""; })()}
+    ${(() => { const mm = []; let m = monthOf(dayKey(Date.now())); for(let i=0;i<12;i++){ const a = monthAvg(m); if(a) mm.unshift({v:a.avg, d:keyTs(m + "-01")}); m = prevMonthKey(m); } return mm.length > 1 ? `<div class="sec-title">Poids (par mois)</div><div class="card">${lineChart(mm, "kg")}</div>` : ""; })()}
     <div class="sec-title">Séances par semaine</div>
     <div class="card"><div class="bars">${weeks.map(w => `<div class="${w.n>=goal?"ok":w.n?"has":""}" style="height:${Math.max(5, w.n/maxN*100)}%"><span>S${weekNum(w.ws)}</span></div>`).join("")}</div></div>`;
 
@@ -1245,11 +1258,12 @@ document.addEventListener("click", ev => {
       const ne = makeEntry(x, hasVar(x) ? lastVariant(x) : 0); ne.ss = e.ss; ne.swappedFrom = e.baseName || e.name;
       S.draft.entries[S.modal.ei] = ne; S.modal = null; saveDraft(); showToast("Remplacé pour aujourd'hui", false, "ok"); break;
     }
+    case "wopen": S.wOpen = !S.wOpen; break;
     case "wstep": S.wDraft = Math.max(30, Math.round((S.wDraft + (+v))*10)/10); break;
     case "wsave": {
       const k = dayKey(Date.now()), w = Math.round(S.wDraft*10)/10;
       S.weights = S.weights.filter(x => x.d !== k).concat([{d:k, w}]).sort((p,q) => p.d < q.d ? -1 : 1);
-      saveLocal(); showToast("Poids enregistré : " + fmt(w) + " kg", false, "ok"); break;
+      saveLocal(); S.wOpen = false; showToast("Poids enregistré : " + fmt(w) + " kg", false, "ok"); break;
     }
     case "cal": S.calOff = Math.min(0, S.calOff + (+v)); break;
     case "sound": S.config.sound = S.config.sound === false; saveConfig(); ensureAudio(); if(S.config.sound) beep(); break;
