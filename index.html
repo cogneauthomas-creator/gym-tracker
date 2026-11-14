@@ -214,6 +214,10 @@ textarea{min-height:110px;font-size:12px;font-family:ui-monospace,monospace}
 .chkrow input{width:22px;height:22px;flex:none}
 .next-title{font-weight:700;font-size:28px;margin:2px 0 6px}
 .center{text-align:center}
+.tile img.mimg{width:100%;height:100%;object-fit:cover;display:block}
+.body-fig .dimg{height:118px;width:auto;display:block}
+.body-fig{filter:none}
+.prow .tile img.dimg{width:100%;height:100%;object-fit:contain}
 svg.g{width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round;flex:none;vertical-align:-3px}
 svg.g.flame{color:var(--org);width:20px;height:20px} svg.g.gold,.ico.gold{color:#E6A700} svg.g.blue,.ico.blue{color:var(--acc)}
 .ico svg.g{width:24px;height:24px}
@@ -539,7 +543,10 @@ function figure(set, view, h){
   s += `<rect x="22" y="93" width="7" height="24" rx="3.5" style="fill:${on("calves")}"/><rect x="31" y="93" width="7" height="24" rx="3.5" style="fill:${on("calves")}"/></svg>`;
   return s;
 }
-function tileFig(name, h){ const m = musclesOf(name); return figure(new Set(m), m.length && BACK_ONLY.has(m[0]) ? "back" : "front", h); }
+const DAYIMG = {PUSH:"push", PULL:"pull", LEGS:"legs", EPAULES_BRAS:"arms"};
+function dayImg(d){ return d && DAYIMG[d.id] ? `<img class="dimg" src="img/d-${DAYIMG[d.id]}.png" alt="" decoding="async">` : ""; }
+function tileFig(name, h){ const mm = musclesOf(name)[0]; if(mm) return `<img class="mimg" src="img/m-${mm}.png" alt="" loading="lazy" decoding="async">`; return tileFigSvg(name, h); }
+function tileFigSvg(name, h){ const m = musclesOf(name); return figure(new Set(m), m.length && BACK_ONLY.has(m[0]) ? "back" : "front", h); }
 function miniTarget(ex, tg){
   if(tg.type === "routine") return `<div class="tg-mini">${G("timer")}${ex.min} min</div>`;
   if(tg.type === "first") return `<div class="tg-mini">${G("plusc")}Premier essai</div>`;
@@ -764,7 +771,7 @@ function renderHome(){
         <div class="plan-title">${esc(day.name)}<button class="more" data-a="editnav">${IC.pen}</button></div>
         <div class="plan-sub">${day.ex.length} exercices, ${totalSets} séries</div>
         ${teaser ? `<div class="teaser">${teaser}</div>` : ""}</div>
-        <div class="body-fig">${figure(ms,"front",92)}${figure(ms,"back",92)}</div></div>
+        <div class="body-fig">${dayImg(day) || figure(ms,"front",92) + figure(ms,"back",92)}</div></div>
       <div class="exlist">${day.ex.map((ex,i) => `<div class="exrow"><div class="tile">${tileFig(ex.name, 46)}</div><div class="grow">
           <div class="exname">${esc(ex.name)}</div>${hasVar(ex) ? `<div class="exsub">${ex.variants.map((v,j) => j === lastVariant(ex) ? `<b style="color:var(--txt)">${esc(v.name)}</b>` : esc(v.name)).join(" / ")}</div>` : ""}${miniTarget(ex, tgs[i])}${ex.ss && day.ex[i+1] ? `<div class="tg-mini goal">${G("link")}Superset avec ${esc(day.ex[i+1].name)}</div>` : ""}
           <div class="pls">${ex.unit === "routine" ? `<span>${ex.min} min</span>` : `<span>${ex.sets} séries</span><span>${ex.min}–${ex.max} ${ex.unit==="sec"?"s":"reps"}</span>`}</div></div></div>`).join("")
@@ -903,7 +910,7 @@ function renderSettings(){
   h += `<div class="sec-title">Programme</div>`;
   if(!ep){
     h += `<div class="card" style="padding:4px 16px">${c.program.map((d,i) => { const ms = new Set(d.ex.flatMap(e => musclesOf(e.name)));
-      return `<button class="prow" data-a="editnav"><div class="tile">${figure(ms,"front",34)}</div><div class="grow"><div style="font-weight:600">${esc(d.name)}</div><div class="mut small">${d.ex.length} exercices</div></div>${IC.chev}</button>`; }).join("")}</div>
+      return `<button class="prow" data-a="editnav"><div class="tile">${dayImg(d) || figure(ms,"front",34)}</div><div class="grow"><div style="font-weight:600">${esc(d.name)}</div><div class="mut small">${d.ex.length} exercices</div></div>${IC.chev}</button>`; }).join("")}</div>
       <button class="btn main" data-a="editprog" style="margin-bottom:6px">Modifier</button>`;
   } else {
     h += `<div class="card">`;
