@@ -275,6 +275,22 @@ function applyPatches(){
     }
     c.patches.push("v4"); saveLocal();
   }
+  if(!c.patches.includes("v5")){
+    const find = id => { for(const d of c.program){ const i = d.ex.findIndex(x => x.id === id); if(i >= 0) return [d, i]; } return [null, -1]; };
+    let [d, i] = find("rowing_uni");
+    if(d) d.ex[i] = {id:"tirage_uni", name:"Tirage unilatéral poulie haute", sets:3, min:8, max:12, inc:2.5, unit:"reps", note:"Tire le coude vers la poche"};
+    [d, i] = find("crunch_poulie");
+    if(d) d.ex[i] = {id:"abdos_routine", name:"Routine abdos", sets:1, min:10, max:10, inc:0, unit:"routine", note:"10 minutes, ta routine habituelle"};
+    const pull = c.program.find(x => x.id === "PULL");
+    if(pull && !pull.ex.some(x => x.id === "ab_rotations"))
+      pull.ex.push({id:"ab_rotations", name:"Avant-bras : rotations haltère", sets:3, min:10, max:15, inc:1, unit:"reps", startW:10, note:"Coude posé sur le banc, tourne de droite à gauche"});
+    const eb = c.program.find(x => x.id === "EPAULES_BRAS");
+    if(eb && !eb.ex.some(x => x.id === "ab_curl_poulie")){
+      eb.ex.push({id:"ab_curl_poulie", name:"Avant-bras : curl poignets à la poulie", sets:3, min:12, max:20, inc:2.5, unit:"reps", ss:true, note:"Barre, face à la poulie"});
+      eb.ex.push({id:"ab_ext_poulie", name:"Avant-bras : dos à la poulie", sets:3, min:12, max:20, inc:2.5, unit:"reps", note:"Dos à la poulie, tire vers le haut"});
+    }
+    c.patches.push("v5"); saveLocal();
+  }
 }
 function saveLocal(){ try{ localStorage.setItem(LS_KEY, JSON.stringify({config:S.config, sessions:S.sessions, draft:S.draft})); }catch(e){} }
 
@@ -338,6 +354,7 @@ function entryBest(e){ return Math.max(0, ...e.sets.map(s => e.unit === "sec" ? 
 function entryMaxW(e){ return Math.max(0, ...e.sets.map(s => s.w || 0)); }
 
 function computeTarget(ex, last){
+  if(ex.unit === "routine") return {type:"routine", sets:null};
   if(!last) return {type:"first", sets:null};
   const ls = last.sets.slice();
   while(ls.length < ex.sets) ls.push({...ls[ls.length-1]});
@@ -358,6 +375,7 @@ function computeTarget(ex, last){
 }
 function targetText(ex, tg){
   const u = ex.unit === "sec" ? "s" : "";
+  if(tg.type === "routine") return `⏱️ ${ex.min} min : coche quand c'est fait`;
   if(tg.type === "first") return "🆕 Première fois : trouve une charge où tu finis à 2–3 reps de l'échec";
   const reps = tg.sets.map(s => s.r + u).join(" · ");
   const w = tg.sets[0].w;
@@ -366,7 +384,7 @@ function targetText(ex, tg){
   return `🎯 Objectif : ${w ? fmt(w)+" kg × " : ""}${reps}`;
 }
 function stagnation(exId){
-  const h = history(exId); if(h.length < 4) return false;
+  const h = history(exId); if(h.length < 4 || h[0].unit === "routine") return false;
   const bests = h.map(entryBest);          // [récent ... ancien]
   const recent = Math.max(...bests.slice(0,3)); const before = Math.max(...bests.slice(3));
   return recent <= before;
@@ -391,6 +409,7 @@ function streakInfo(){
 
 /* ================= SILHOUETTE MUSCULAIRE ================= */
 const MUSCLE_RULES = [
+  [/avant-bras|poignet/i, "forearms"],
   [/leg curl|ischio|jambes tendues|soulevé|sdt/i, "hams"],
   [/mollet/i, "calves"],
   [/gainage|abdo|crunch/i, "abs"],
@@ -408,7 +427,7 @@ function figure(set, view, h){
   let s = `<svg viewBox="0 0 60 124" height="${h}" width="${Math.round(h*60/124)}" style="display:block">
     <circle cx="30" cy="9" r="7" fill="${B}"/><rect x="27" y="15" width="6" height="6" fill="${B}"/>
     <ellipse cx="14.5" cy="26" rx="6" ry="5.5" fill="${on("shoulders")}"/><ellipse cx="45.5" cy="26" rx="6" ry="5.5" fill="${on("shoulders")}"/>
-    <rect x="7" y="51" width="6" height="17" rx="3" fill="${B}"/><rect x="47" y="51" width="6" height="17" rx="3" fill="${B}"/>`;
+    <rect x="7" y="51" width="6" height="17" rx="3" fill="${on("forearms")}"/><rect x="47" y="51" width="6" height="17" rx="3" fill="${on("forearms")}"/>`;
   if(view === "front"){
     s += `<rect x="20" y="21" width="9.5" height="13" rx="4" fill="${on("chest")}"/><rect x="30.5" y="21" width="9.5" height="13" rx="4" fill="${on("chest")}"/>
       <rect x="22" y="35.5" width="16" height="19" rx="4" fill="${on("abs")}"/>
@@ -426,6 +445,7 @@ function figure(set, view, h){
 }
 function tileFig(name, h){ const m = musclesOf(name); return figure(new Set(m), m.length && BACK_ONLY.has(m[0]) ? "back" : "front", h); }
 function miniTarget(ex, tg){
+  if(tg.type === "routine") return `<div class="tg-mini" style="color:var(--blue)">⏱️ ${ex.min} min</div>`;
   if(tg.type === "first") return `<div class="tg-mini" style="color:var(--blue)">🆕 Premier essai</div>`;
   const w = tg.sets[0].w;
   if(tg.type === "load") return `<div class="tg-mini" style="color:var(--org)">🔥 Monte à ${fmt(w)} kg</div>`;
@@ -448,7 +468,8 @@ function makeEntry(ex, vi){
   const id = exKey(ex, vi), last = history(id)[0], tg = computeTarget(ex, last);
   const startW = (hasVar(ex) ? ex.variants[Math.min(vi||0, ex.variants.length-1)].startW : ex.startW) || 0;
   const sets = [];
-  for(let i=0;i<ex.sets;i++){ const t = tg.sets ? tg.sets[i] : null; sets.push({ w: t ? t.w : startW, r: t ? t.r : ex.min, done:false }); }
+  const n = ex.unit === "routine" ? 1 : ex.sets;
+  for(let i=0;i<n;i++){ const t = tg.sets ? tg.sets[i] : null; sets.push({ w: t ? t.w : startW, r: t ? t.r : ex.min, done:false }); }
   return { exId:id, baseId:ex.id, vi:vi||0, variants: hasVar(ex) ? clone(ex.variants) : null, name: exLabel(ex, vi), baseName: ex.name,
     unit:ex.unit, min:ex.min, max:ex.max, inc:ex.inc, note:ex.note||"", nSets:ex.sets, ss: !!ex.ss, target: tg, sets, feel:null };
 }
@@ -473,7 +494,7 @@ function checkSet(ei, si){
   if(s.done){
     // record ?
     const h = history(e.exId);
-    if(h.length){
+    if(h.length && e.unit !== "routine"){
       const prevBest = Math.max(...h.map(entryBest));
       const prevMaxW = Math.max(...h.map(entryMaxW));
       const others = e.sets.filter((x,i) => x.done && i !== si);
@@ -485,6 +506,7 @@ function checkSet(ei, si){
     }
     const nxt = S.draft.entries[ei+1];
     if(e.ss && nxt){ stopTimer(); if(!toasted) showToast("➡️ Enchaîne direct : " + (nxt.baseName || nxt.name)); }
+    else if(e.unit === "routine"){ stopTimer(); showToast("💪 Routine abdos validée"); }
     else startTimer();
   }
   saveDraft(); render();
@@ -531,7 +553,7 @@ function claudeSummary(){
   lines.push("", "SÉANCES (récentes d'abord)");
   S.sessions.slice(0, 30).forEach(s => {
     lines.push("", dayFr(s.date) + " — " + s.dayName + (s.durationMin ? " (" + s.durationMin + " min)" : "") + (s.goalsTotal ? " · objectifs " + s.goalsHit + "/" + s.goalsTotal : "") + ((s.prs||[]).length ? " · records : " + s.prs.map(p => p.name).join(", ") : ""));
-    (s.entries||[]).forEach(e => lines.push("  " + e.name + " : " + e.sets.map(x => (x.w ? fmt(x.w) + "kg×" : "") + x.r + (e.unit === "sec" ? "s" : "")).join(", ") + (e.feel ? " [" + ({easy:"facile",ok:"correct",hard:"dur",pain:"DOULEUR"})[e.feel] + "]" : "")));
+    (s.entries||[]).forEach(e => lines.push("  " + e.name + " : " + e.sets.map(x => (x.w ? fmt(x.w) + "kg×" : "") + x.r + (e.unit === "sec" ? "s" : e.unit === "routine" ? " min" : "")).join(", ") + (e.feel ? " [" + ({easy:"facile",ok:"correct",hard:"dur",pain:"DOULEUR"})[e.feel] + "]" : "")));
   });
   return lines.join("\n");
 }
@@ -594,11 +616,11 @@ function renderHome(){
       <button class="btn main" data-a="resume">Reprendre la séance</button></div>`;
   } else {
     const prog = S.config.program;
-    let pi = S.pickIdx; if(!(pi >= 0 && pi < prog.length)) pi = S.config.nextIdx;
+    let pi = S.pickIdx; if(!(Number.isInteger(pi) && pi >= 0 && pi < prog.length)) pi = S.config.nextIdx;
     const day = prog[pi];
     let loads = 0, reps = 0, firsts = 0;
     const tgs = day.ex.map(ex => computeTarget(ex, history(exKey(ex, lastVariant(ex)))[0]));
-    tgs.forEach(t => { if(t.type==="load") loads++; else if(t.type==="first") firsts++; else reps++; });
+    tgs.forEach(t => { if(t.type==="load") loads++; else if(t.type==="first" || t.type==="routine") firsts++; else reps++; });
     const teaser = !day.ex.length ? "" : firsts === day.ex.length ? "Première séance : on pose tes repères" :
       loads ? `🔥 ${loads} exercice${loads>1?"s":""} où tu montes en charge` : `🎯 ${reps} objectif${reps>1?"s":""} de reps à battre`;
     const ms = new Set(day.ex.flatMap(e => musclesOf(e.name)));
@@ -611,7 +633,7 @@ function renderHome(){
         <div class="body-fig">${figure(ms,"front",96)}${figure(ms,"back",96)}</div></div>
       <div class="exlist">${day.ex.map((ex,i) => `<div class="exrow"><div class="tile">${tileFig(ex.name, 54)}</div><div style="min-width:0">
           <div class="exname">${esc(ex.name)}</div>${hasVar(ex) ? `<div class="exsub">${ex.variants.map((v,j) => j === lastVariant(ex) ? `<b style="color:var(--txt)">${esc(v.name)}</b>` : esc(v.name)).join(" / ")}</div>` : ""}${miniTarget(ex, tgs[i])}${ex.ss && day.ex[i+1] ? `<div class="tg-mini" style="color:var(--acc)">🔗 Superset avec ${esc(day.ex[i+1].name)}</div>` : ""}
-          <div class="pls"><span>${ex.sets} séries</span><span>${ex.min}–${ex.max} ${ex.unit==="sec"?"s":"reps"}</span></div></div></div>`).join("")
+          <div class="pls">${ex.unit === "routine" ? `<span>${ex.min} min</span>` : `<span>${ex.sets} séries</span><span>${ex.min}–${ex.max} ${ex.unit==="sec"?"s":"reps"}</span>`}</div></div></div>`).join("")
         || `<div class="mut small" style="padding:16px 0">Aucun exercice. Ajoute-en avec •••</div>`}</div>
       <button class="btn main" data-a="start" data-v="${pi}">${ICON_CLIP} Commencer la séance</button></div>`;
   }
@@ -648,26 +670,28 @@ function renderWorkout(){
     <div class="prog"><i style="width:${total ? done/total*100 : 0}%"></i></div></div>`;
   d.entries.forEach((e, ei) => {
     const last = history(e.exId)[0];
-    const u = e.unit === "sec" ? "s" : "";
+    const u = e.unit === "sec" ? "s" : e.unit === "routine" ? " min" : "";
     const stag = stagnation(e.exId);
     const prevE = d.entries[ei-1], nextE = d.entries[ei+1];
     const ssCls = (e.ss && nextE ? " ss-top" : "") + (prevE && prevE.ss ? " ss-bot" : "");
     h += `<div class="card${ssCls}"><div class="exhead"><div class="tile sm">${tileFig(e.baseName || e.name, 42)}</div>
-      <div style="min-width:0"><div class="exname">${esc(e.baseName || e.name)}</div><div class="exsub">${e.nSets} séries · ${e.min}–${e.max} ${e.unit==="sec"?"s":"reps"}${stag ? ` · <span style="color:var(--org)">stagne</span>` : ""}</div></div>
+      <div style="min-width:0"><div class="exname">${esc(e.baseName || e.name)}</div><div class="exsub">${e.unit === "routine" ? e.min + " min" : `${e.nSets} séries · ${e.min}–${e.max} ${e.unit==="sec"?"s":"reps"}`}${stag ? ` · <span style="color:var(--org)">stagne</span>` : ""}</div></div>
       <button class="editbtn" data-a="exedit" data-e="${ei}">✏️</button></div>
       ${e.variants ? `<div class="seg">${e.variants.map((v,i) => `<button class="${i===e.vi?"on":""}" data-a="variant" data-e="${ei}" data-v="${i}">${esc(v.name)}</button>`).join("")}</div>` : ""}
       ${e.ss && nextE ? `<div class="sstag">🔗 SUPERSET · enchaîne avec ${esc(nextE.baseName || nextE.name)}</div>` : ""}
       ${e.note ? `<div class="ex-note">${esc(e.note)}</div>` : ""}
       ${last ? `<div class="last">Dernière fois (${dateFr(last.date)}) : ${last.sets.map(s => (s.w ? fmt(s.w)+"×" : "") + s.r + u).join(" · ")}</div>` : ""}
       <div class="target ${e.target.type}">${targetText(e, e.target)}</div>
-      <div class="sets"><div class="sethead"><span>#</span><span>Poids (kg)</span><span>${e.unit==="sec"?"Temps":"Reps"}</span><span></span></div>${e.sets.map((s, si) => {
+      ${e.unit === "routine" ? `<div class="sets">${e.sets.map((s, si) => `<div class="set ${s.done?"done":""}" style="grid-template-columns:28px 1fr 46px"><div class="idx">⏱</div>
+          <div class="stp"><button data-a="st" data-e="${ei}" data-s="${si}" data-f="r" data-d="-1">−</button><input inputmode="numeric" data-in="r" data-e="${ei}" data-s="${si}" value="${s.r}"><span class="mut small" style="margin-right:6px">min</span><button data-a="st" data-e="${ei}" data-s="${si}" data-f="r" data-d="1">+</button></div>
+          <button class="chk" data-a="chk" data-e="${ei}" data-s="${si}">✓</button></div>`).join("")}</div>` : `<div class="sets"><div class="sethead"><span>#</span><span>Poids (kg)</span><span>${e.unit==="sec"?"Temps":"Reps"}</span><span></span></div>${e.sets.map((s, si) => {
         const t = e.target.sets && e.target.sets[si];
         const hit = s.done && t && s.w >= t.w && s.r >= t.r;
         return `<div class="set ${s.done?"done":""} ${hit?"hit":""}"><div class="idx">${hit?"✓":si+1}</div>
           <div class="stp"><button data-a="st" data-e="${ei}" data-s="${si}" data-f="w" data-d="-1">−</button><input inputmode="decimal" data-in="w" data-e="${ei}" data-s="${si}" value="${fmt(s.w)}"><button data-a="st" data-e="${ei}" data-s="${si}" data-f="w" data-d="1">+</button></div>
           <div class="stp"><button data-a="st" data-e="${ei}" data-s="${si}" data-f="r" data-d="-1">−</button><input inputmode="numeric" data-in="r" data-e="${ei}" data-s="${si}" value="${s.r}"><button data-a="st" data-e="${ei}" data-s="${si}" data-f="r" data-d="1">+</button></div>
           <button class="chk" data-a="chk" data-e="${ei}" data-s="${si}">✓</button></div>`; }).join("")}</div>
-      <div class="row"><button class="addset" data-a="addset" data-e="${ei}">+ Ajouter une série</button>${e.sets.length > 1 ? `<button class="addset" data-a="delset" data-e="${ei}">− Retirer une série</button>` : ""}</div>
+      <div class="row"><button class="addset" data-a="addset" data-e="${ei}">+ Ajouter une série</button>${e.sets.length > 1 ? `<button class="addset" data-a="delset" data-e="${ei}">− Retirer une série</button>` : ""}</div>`}
       <div class="feel">${[["easy","😎 Facile"],["ok","👌 Correct"],["hard","🥵 Dur"],["pain","⚠️ Douleur"]].map(([k,l]) =>
         `<button class="${e.feel===k?"on":""} ${k}" data-a="feel" data-e="${ei}" data-v="${k}">${l}</button>`).join("")}</div></div>`;
   });
