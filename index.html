@@ -250,6 +250,31 @@ function applyPatches(){
     }));
     c.patches.push("v3"); saveLocal();
   }
+  if(!c.patches.includes("v4")){
+    // Nouveau split : Push / Pull / Legs / Épaules-Bras (les exercices existants gardent leur historique)
+    const ids = c.program.map(d => d.id);
+    if(ids.includes("PUSH") && ids.includes("PULL") && ids.includes("LEGS")){
+      const all = {}; c.program.forEach(d => d.ex.forEach(x => { if(!all[x.id]) all[x.id] = x; }));
+      const g = (id, def) => all[id] ? clone(all[id]) : Object.assign({id, unit:"reps", sets:3}, def);
+      const tp = g("tri_poulie", {name:"Triceps poulie haute (courte portion)", min:8, max:12, inc:2.5}); tp.ss = true;
+      c.program = [
+        {id:"PUSH", name:"Push", ex:[ g("smith_incl",{}), g("dev_militaire",{}), g("pec_fly",{}), g("pec_uni",{}), g("elev_lat",{}), tp,
+          g("tri_poulie_basse", {name:"Triceps poulie basse (longue portion)", min:6, max:12, inc:2.5, note:"Poulie au niveau du nombril, jusqu'à l'échec"}) ]},
+        {id:"PULL", name:"Pull", ex:[ g("tirage_vert",{}), g("tirage_horiz",{}),
+          g("rowing_uni", {name:"Rowing unilatéral haltère", min:8, max:12, inc:2, note:"Main et genou en appui sur le banc, dos plat"}),
+          g("poulie_ailes",{}), g("curl_incl",{}) ]},
+        {id:"LEGS", name:"Legs", ex:[ g("hack_squat",{}), g("fentes",{}), g("leg_ext",{}),
+          g("lc_assis", {name:"Leg curl assis", min:10, max:15, inc:2.5}), g("mollets",{}),
+          g("crunch_poulie", {name:"Crunch à la poulie", min:10, max:15, inc:2.5, note:"Enroule le dos, ne tire pas avec les bras"}) ]},
+        {id:"EPAULES_BRAS", name:"Épaules / Bras", ex:[
+          g("elev_lat_halt", {name:"Élévations latérales haltères", sets:4, min:12, max:20, inc:1}), g("arriere_epaule",{}),
+          g("curl_ez",{}), g("tri_uni",{}), g("curl_marteau",{}),
+          g("tri_overhead", {name:"Extension triceps au-dessus de la tête", min:10, max:15, inc:2.5}) ]}
+      ];
+      c.nextIdx = (c.nextIdx || 0) % c.program.length;
+    }
+    c.patches.push("v4"); saveLocal();
+  }
 }
 function saveLocal(){ try{ localStorage.setItem(LS_KEY, JSON.stringify({config:S.config, sessions:S.sessions, draft:S.draft})); }catch(e){} }
 
