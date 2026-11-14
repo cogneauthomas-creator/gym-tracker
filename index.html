@@ -202,6 +202,9 @@ svg.i{width:22px;height:22px;stroke:currentColor;fill:none;stroke-width:2;stroke
 .prow .grow{flex:1}
 .prow .tile{width:40px;height:40px;border-radius:11px}
 .ed-ex{display:grid;grid-template-columns:1fr;gap:6px;padding:10px 0;border-top:1px solid var(--line)}
+.ed-name{display:flex;gap:6px;align-items:center}
+.mv{flex:0 0 38px;height:38px;border-radius:10px;background:var(--card2);color:var(--txt);font-size:17px}
+.mv[disabled]{opacity:.3}
 .ed-row{display:grid;grid-template-columns:repeat(4,1fr) 40px;gap:6px;align-items:end}
 .ed-row label{font-size:10px;color:var(--mut);display:block;margin-bottom:2px}
 .ed-row input,.ed-row select{padding:8px 6px;font-size:15px}
@@ -524,6 +527,32 @@ function applyPatches(){
     }
     c.patches.push("v5"); saveLocal();
   }
+  if(!c.patches.includes("v6")){
+    // Curl barre EZ ajouté à la séance Pull, juste après le curl banc incliné (même historique que le Curl EZ des bras)
+    const pull = c.program.find(x => x.id === "PULL");
+    if(pull && !pull.ex.some(x => x.id === "curl_ez")){
+      let src = null; c.program.forEach(d => d.ex.forEach(x => { if(x.id === "curl_ez" && !src) src = x; }));
+      const ez = src ? clone(src) : {id:"curl_ez", name:"Curl EZ", sets:3, min:8, max:12, inc:2.5, unit:"reps"};
+      delete ez.ss;
+      const ci = pull.ex.findIndex(x => x.id === "curl_incl");
+      pull.ex.splice(ci >= 0 ? ci + 1 : pull.ex.length, 0, ez);
+    }
+    c.patches.push("v6"); saveLocal();
+  }
+}
+// Déplace un exercice de la séance en cours et garde le même ordre dans le programme
+function placeInDraft(ei, to){
+  const d = S.draft, arr = d.entries;
+  to = Math.max(0, Math.min(arr.length - 1, to)); if(to === ei) return;
+  const [e] = arr.splice(ei, 1); arr.splice(to, 0, e);
+  S.openEx = new Set();
+  const day = S.config.program[d.dayIdx]; if(!day) return;
+  const idOf = x => x.baseId || String(x.exId).split("~")[0];
+  const pi = day.ex.findIndex(x => x.id === idOf(e)); if(pi < 0) return;
+  const [px] = day.ex.splice(pi, 1);
+  let ins = 0;
+  for(let j = to - 1; j >= 0; j--){ const k = day.ex.findIndex(x => x.id === idOf(arr[j])); if(k >= 0){ ins = k + 1; break; } }
+  day.ex.splice(ins, 0, px);
 }
 function saveLocal(){ try{ localStorage.setItem(LS_KEY, JSON.stringify({config:S.config, sessions:S.sessions, draft:S.draft, weights:S.weights})); }catch(e){} }
 
@@ -1207,7 +1236,9 @@ function renderSettings(){
     ep.forEach((d, di) => {
       h += `<div style="margin-top:${di?18:0}px"><div class="daybar"><input data-in="pday" data-d="${di}" value="${esc(d.name)}">${ep.length > 1 ? `<button class="x" style="width:40px" data-a="delday" data-d="${di}">✕</button>` : ""}</div>`;
       d.ex.forEach((e, xi) => {
-        h += `<div class="ed-ex"><input data-in="pex" data-d="${di}" data-x="${xi}" data-f="name" value="${esc(e.name)}">
+        h += `<div class="ed-ex"><div class="ed-name"><input data-in="pex" data-d="${di}" data-x="${xi}" data-f="name" value="${esc(e.name)}">
+          <button class="mv" data-a="mvex" data-d="${di}" data-x="${xi}" data-v="-1" ${xi===0?"disabled":""} aria-label="Monter">↑</button>
+          <button class="mv" data-a="mvex" data-d="${di}" data-x="${xi}" data-v="1" ${xi===d.ex.length-1?"disabled":""} aria-label="Descendre">↓</button></div>
           <div class="ed-row">
             <div><label>Séries</label><input inputmode="numeric" data-in="pex" data-d="${di}" data-x="${xi}" data-f="sets" value="${e.sets}"></div>
             <div><label>Min</label><input inputmode="numeric" data-in="pex" data-d="${di}" data-x="${xi}" data-f="min" value="${e.min}"></div>
@@ -1285,6 +1316,10 @@ function renderLayer(){
       <label class="fl">Repos entre les séries (secondes)</label><input inputmode="numeric" data-in="me" data-f="rest" value="${f.rest||""}">
       <label class="fl">Note (facultatif)</label><input data-in="me" data-f="note" value="${esc(f.note||"")}">
       <label class="fl">Variantes (facultatif, séparées par des virgules)</label><input data-in="me" data-f="variants" placeholder="ex : Haltères, Machine" value="${esc(f.variants||"")}">
+      ${S.draft ? (() => { const others = S.draft.entries.filter((x,i) => i !== S.modal.ei);
+        return `<label class="fl">Position dans la séance</label><select data-in="me" data-f="pos">
+          <option value="0" ${f.pos===0?"selected":""}>En premier</option>
+          ${others.map((x,j) => `<option value="${j+1}" ${f.pos===j+1?"selected":""}>Après ${esc(x.baseName || x.name)}</option>`).join("")}</select>`; })() : ""}
       <label class="chkrow"><input type="checkbox" data-in="me" data-f="ss" ${f.ss?"checked":""}> Superset : enchaîner avec l'exercice suivant</label>
       <div class="mut small" style="margin:10px 0">${isNew ? "Il sera ajouté à cette séance et au programme." : "Les changements s'appliquent au programme. Renommer garde ton historique."}</div>
       <button class="btn main sm" data-a="exsave">Enregistrer</button>
@@ -1379,8 +1414,8 @@ document.addEventListener("click", ev => {
       e.sets.splice(k >= 0 ? k : e.sets.length-1, 1); saveDraft(); break;
     }
     case "exedit": { const e = S.draft.entries[ei];
-      S.modal = {type:"exedit", ei, f:{name:e.baseName || e.name, sets:e.nSets, min:e.min, max:e.max, inc:e.inc, note:e.note||"", unit:e.unit, variants:(e.variants||[]).map(v => v.name).join(", "), ss:!!e.ss, rest:e.rest||0}}; break; }
-    case "exadd": S.modal = {type:"exedit", ei:-1, f:{name:"", sets:3, min:8, max:12, inc:2.5, note:"", unit:"reps", variants:"", ss:false}}; break;
+      S.modal = {type:"exedit", ei, f:{name:e.baseName || e.name, sets:e.nSets, min:e.min, max:e.max, inc:e.inc, note:e.note||"", unit:e.unit, variants:(e.variants||[]).map(v => v.name).join(", "), ss:!!e.ss, rest:e.rest||0, pos:ei}}; break; }
+    case "exadd": S.modal = {type:"exedit", ei:-1, f:{name:"", sets:3, min:8, max:12, inc:2.5, note:"", unit:"reps", variants:"", ss:false, pos:S.draft.entries.length}}; break;
     case "exsave": {
       const f = S.modal.f, name = String(f.name).trim();
       if(!name){ showToast("Donne un nom à l'exercice", true); return; }
@@ -1396,11 +1431,13 @@ document.addEventListener("click", ev => {
         if(vars) px.variants = vars; else delete px.variants;
         if(!e.sets.some(s => s.done)) S.draft.entries[ei2] = makeEntry(px, vars ? Math.min(e.vi||0, vars.length-1) : 0);
         else Object.assign(e, {baseName:name, name:exLabel(px, e.vi||0), nSets:sets, min:f.min, max:f.max, inc:f.inc, note:f.note, ss:!!f.ss, rest:restFor(px)});
+        if(typeof f.pos === "number") placeInDraft(ei2, f.pos);
       } else {
         const ex = {id:"ex_" + uid(), name, sets, min:f.min, max:f.max, inc:f.inc, unit:"reps", note:f.note, ss:!!f.ss};
         const vars = parseVariants(f.variants, null); if(vars) ex.variants = vars;
         if(day) day.ex.push(ex);
         S.draft.entries.push(makeEntry(ex, 0));
+        if(typeof f.pos === "number") placeInDraft(S.draft.entries.length - 1, f.pos);
       }
       saveConfig(); saveDraft(); S.modal = null; showToast("Enregistré", false, "ok"); break;
     }
@@ -1436,6 +1473,8 @@ document.addEventListener("click", ev => {
     case "cancelprog": S.editProg = null; break;
     case "addex": S.editProg[+el.dataset.d].ex.push({id:"ex_"+uid(), name:"Nouvel exercice", sets:3, min:8, max:12, inc:2.5, unit:"reps"}); break;
     case "delex": S.editProg[+el.dataset.d].ex.splice(+el.dataset.x, 1); break;
+    case "mvex": { const xs = S.editProg[+el.dataset.d].ex, i = +el.dataset.x, j = i + (+el.dataset.v);
+      if(j >= 0 && j < xs.length){ const [m] = xs.splice(i, 1); xs.splice(j, 0, m); } break; }
     case "delday": S.editProg.splice(+el.dataset.d, 1); break;
     case "addday": S.editProg.push({id:"day_"+uid(), name:"Nouvelle séance", ex:[]}); break;
     case "saveprog": S.config.program = S.editProg; S.editProg = null; S.config.nextIdx %= S.config.program.length; saveConfig(); showToast("Programme enregistré"); break;
