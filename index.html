@@ -214,6 +214,42 @@ textarea{min-height:110px;font-size:12px;font-family:ui-monospace,monospace}
 .chkrow input{width:22px;height:22px;flex:none}
 .next-title{font-weight:700;font-size:28px;margin:2px 0 6px}
 .center{text-align:center}
+svg.g{width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round;flex:none;vertical-align:-3px}
+svg.g.flame{color:var(--org);width:20px;height:20px} svg.g.gold,.ico.gold{color:#E6A700} svg.g.blue,.ico.blue{color:var(--acc)}
+.ico svg.g{width:24px;height:24px}
+.tro svg.g{width:34px;height:34px;color:#E6A700}
+.up svg.g{width:14px;height:14px;margin-right:2px}
+.tg-mini{display:flex;align-items:center;gap:6px}
+.tg-mini.goal{color:var(--acc)} .tg-mini.load{color:var(--org)} .tg-mini.hold{color:var(--red)}
+.target{display:flex;align-items:flex-start;gap:10px;font-weight:500}
+.target svg.g{width:20px;height:20px;margin-top:1px;color:var(--acc)}
+.target.load svg.g{color:var(--org)} .target.hold svg.g{color:var(--red)} .target.first svg.g,.target.routine svg.g{color:var(--mut)}
+.target b{font-weight:700}
+.mini-h svg.g{width:18px;height:18px}
+.badge{display:inline-flex;align-items:center;gap:4px} .badge svg.g{width:13px;height:13px}
+.ssdiv{text-transform:none;letter-spacing:0;font-weight:600;font-size:13px;gap:8px}
+.ssdiv svg.g{width:15px;height:15px}
+.idx svg.g{width:18px;height:18px;color:var(--mut)}
+.toast{display:flex;align-items:center;gap:10px;background:var(--card);color:var(--txt);border:1px solid var(--line)}
+.toast svg{width:20px;height:20px;flex:none}
+.toast.ok svg{color:var(--lime);stroke:var(--lime)} .toast.link svg{color:var(--acc)}
+.toast.pr{background:#E6A700;color:#1a1300;border-color:transparent} .toast.warn{background:var(--org);color:#1a1300;border-color:transparent}
+/* retours au toucher */
+.btn,.tab,.chip,.chk,.stp button,.feel button,.seg button,.prow,.list-item,.stepper button,.circ{transition:transform .12s ease,background-color .15s ease,opacity .15s ease}
+.btn:active,.tab:active,.chip:active,.feel button:active,.seg button:active,.stepper button:active{transform:scale(.97)}
+.prow:active,.list-item:active{opacity:.6}
+.stp button:active{background:var(--line)}
+.chk:active{transform:scale(.88)}
+.set.done .chk{animation:tick .28s cubic-bezier(.3,1.6,.5,1)}
+@keyframes tick{0%{transform:scale(.6)}100%{transform:scale(1)}}
+@media (prefers-reduced-motion: reduce){*{animation:none!important;transition:none!important}}
+/* clair : filets plutôt qu'ombres partout */
+@media (prefers-color-scheme: light){ .card,.stat,.tab,.btn.ghost{box-shadow:none;border:1px solid var(--line)} .tab.on{border-color:var(--acc)} }
+.circ.on{box-shadow:none}
+.wk-big{font-weight:800;letter-spacing:-1px}
+.teaser{display:flex;align-items:center;gap:6px}
+.toast{width:max-content;max-width:calc(100vw - 32px)}
+.wk-clock .t{font-weight:800;letter-spacing:-1.5px}
 </style>
 </head>
 <body>
@@ -435,13 +471,13 @@ function computeTarget(ex, last){
 }
 function targetText(ex, tg){
   const u = ex.unit === "sec" ? "s" : "";
-  if(tg.type === "routine") return `⏱️ ${ex.min} min : coche quand c'est fait`;
-  if(tg.type === "first") return "🆕 Première fois : trouve une charge où tu finis à 2–3 reps de l'échec";
+  if(tg.type === "routine") return `${G("timer")}<span>${ex.min} minutes, coche quand c'est fait</span>`;
+  if(tg.type === "first") return `${G("plusc")}<span>Première fois : trouve une charge où tu finis à 2–3 reps de l'échec</span>`;
   const reps = tg.sets.map(s => s.r + u).join(" · ");
   const w = tg.sets[0].w;
-  if(tg.type === "load") return `🔥 Objectif : ${fmt(w)} kg × ${ex.min}+ — tu montes en charge !`;
-  if(tg.type === "hold") return `⚠️ Douleur la dernière fois : même charge (${w ? fmt(w)+" kg" : "PDC"}), technique d'abord`;
-  return `🎯 Objectif : ${w ? fmt(w)+" kg × " : ""}${reps}`;
+  if(tg.type === "load") return `${G("flame")}<span>Tu montes à <b>${fmt(w)} kg</b>, vise ${ex.min} reps ou plus</span>`;
+  if(tg.type === "hold") return `${G("alert")}<span>Douleur la dernière fois : même charge (${w ? fmt(w)+" kg" : "poids du corps"}), technique d'abord</span>`;
+  return `${G("target")}<span>Objectif <b>${w ? fmt(w)+" kg × " : ""}${reps}</b></span>`;
 }
 function stagnation(exId){
   const h = history(exId); if(h.length < 4 || h[0].unit === "routine") return false;
@@ -505,12 +541,12 @@ function figure(set, view, h){
 }
 function tileFig(name, h){ const m = musclesOf(name); return figure(new Set(m), m.length && BACK_ONLY.has(m[0]) ? "back" : "front", h); }
 function miniTarget(ex, tg){
-  if(tg.type === "routine") return `<div class="tg-mini" style="color:var(--blue)">⏱️ ${ex.min} min</div>`;
-  if(tg.type === "first") return `<div class="tg-mini" style="color:var(--blue)">🆕 Premier essai</div>`;
+  if(tg.type === "routine") return `<div class="tg-mini">${G("timer")}${ex.min} min</div>`;
+  if(tg.type === "first") return `<div class="tg-mini">${G("plusc")}Premier essai</div>`;
   const w = tg.sets[0].w;
-  if(tg.type === "load") return `<div class="tg-mini" style="color:var(--org)">🔥 Monte à ${fmt(w)} kg</div>`;
-  if(tg.type === "hold") return `<div class="tg-mini" style="color:var(--red)">⚠️ Même charge, technique</div>`;
-  return `<div class="tg-mini" style="color:#6cb6ff">🎯 ${w ? fmt(w)+" kg · " : ""}${tg.sets.map(s => s.r).join(" / ")} ${ex.unit==="sec"?"s":"reps"}</div>`;
+  if(tg.type === "load") return `<div class="tg-mini load">${G("flame")}Monte à ${fmt(w)} kg</div>`;
+  if(tg.type === "hold") return `<div class="tg-mini hold">${G("alert")}Même charge, technique d'abord</div>`;
+  return `<div class="tg-mini goal">${G("target")}${w ? fmt(w)+" kg, " : ""}${tg.sets.map(s => s.r).join(" / ")} ${ex.unit==="sec"?"s":"reps"}</div>`;
 }
 const ICON_CLIP = `<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="4" width="14" height="17" rx="2"/><path d="M9 4V3h6v1"/><path d="M9 11h6M9 15h4"/></svg>`;
 
@@ -552,6 +588,7 @@ function checkSet(ei, si){
   s.done = !s.done;
   let toasted = false;
   if(s.done){
+    try{ navigator.vibrate && navigator.vibrate(12); }catch(err){}
     // record ?
     const h = history(e.exId);
     if(h.length && e.unit !== "routine"){
@@ -560,13 +597,13 @@ function checkSet(ei, si){
       const others = e.sets.filter((x,i) => x.done && i !== si);
       const curBestOthers = Math.max(0, ...others.map(x => e.unit === "sec" ? x.r : (e1rm(x.w,x.r) || x.r)));
       const val = e.unit === "sec" ? s.r : (e1rm(s.w, s.r) || s.r);
-      if(s.w > prevMaxW && s.w > Math.max(0, ...others.map(x => x.w))) toasted = true, showToast(`🏆 Record de charge : ${fmt(s.w)} kg !`);
-      else if(val > prevBest && val > curBestOthers) toasted = true, showToast(e.unit === "sec" ? `🏆 Record : ${s.r} s !` : `🏆 Record ! 1RM estimé ${fmt(Math.round(val*2)/2)} kg`);
-      else if(e.target.sets && e.target.sets[si] && s.w >= e.target.sets[si].w && s.r >= e.target.sets[si].r) toasted = true, showToast("✅ Objectif de la série atteint");
+      if(s.w > prevMaxW && s.w > Math.max(0, ...others.map(x => x.w))) toasted = true, showToast(`Record de charge : ${fmt(s.w)} kg`, false, "pr");
+      else if(val > prevBest && val > curBestOthers) toasted = true, showToast(e.unit === "sec" ? `Record : ${s.r} s` : `Record : 1RM estimé ${fmt(Math.round(val*2)/2)} kg`, false, "pr");
+      else if(e.target.sets && e.target.sets[si] && s.w >= e.target.sets[si].w && s.r >= e.target.sets[si].r) toasted = true, showToast("Objectif de la série atteint", false, "ok");
     }
     const nxt = S.draft.entries[ei+1];
-    if(e.ss && nxt){ stopTimer(); if(!toasted) showToast("➡️ Enchaîne direct : " + (nxt.baseName || nxt.name)); }
-    else if(e.unit === "routine"){ stopTimer(); showToast("💪 Routine abdos validée"); }
+    if(e.ss && nxt){ stopTimer(); if(!toasted) showToast("Enchaîne direct : " + (nxt.baseName || nxt.name), false, "link"); }
+    else if(e.unit === "routine"){ stopTimer(); showToast("Routine abdos validée", false, "ok"); }
     else startTimer();
   }
   saveDraft(); render();
@@ -635,8 +672,9 @@ setInterval(() => {
 
 /* ================= TOAST ================= */
 let toastT = null;
-function showToast(msg, warn){
-  S.toast = {msg, warn}; renderLayer();
+function showToast(msg, warn, kind){
+  S.toast = {msg, warn, kind};
+  if(kind === "pr"){ try{ navigator.vibrate && navigator.vibrate([30,40,30]); }catch(e){} } renderLayer();
   clearTimeout(toastT); toastT = setTimeout(() => { S.toast = null; renderLayer(); }, 2600);
 }
 
@@ -645,6 +683,21 @@ const app = document.getElementById("app"), layer = document.getElementById("lay
 function syncPill(){
   return {cloud:"☁️ Synchronisé", connecting:"⏳ Connexion…", slow:"⏳ Données pas encore chargées", local:"📱 Hors ligne", device:"📱 Sur ce téléphone"}[S.sync];
 }
+const GLY = {
+  flame:'<path d="M12 3c1 3.5 5 5.5 5 10a5 5 0 0 1-10 0c0-2.2 1.2-3.6 2.3-4.6.3 1.6 1.2 2.6 2.2 2.6 0-3 0-5.5.5-8z"/>',
+  target:'<circle cx="12" cy="12" r="8.5"/><circle cx="12" cy="12" r="4.5"/><circle cx="12" cy="12" r=".9" fill="currentColor"/>',
+  trophy:'<path d="M8 4h8v5a4 4 0 0 1-8 0z"/><path d="M8 6H5v1.5A3 3 0 0 0 8 10.5M16 6h3v1.5a3 3 0 0 1-3 3"/><path d="M12 13v4M8.5 20h7M10 17h4"/>',
+  timer:'<circle cx="12" cy="13.5" r="7"/><path d="M12 10v3.5l2.2 1.5M10 3h4"/>',
+  bars:'<path d="M5 20v-6M10 20V9M15 20v-9M20 20V5"/>',
+  dumbbell:'<path d="M6.5 7v10M17.5 7v10M3.5 9.5v5M20.5 9.5v5M6.5 12h11"/>',
+  star:'<path d="m12 3.8 2.5 5.1 5.6.8-4 3.9 1 5.6-5.1-2.7-5 2.7.9-5.6-4-3.9 5.6-.8z"/>',
+  link:'<path d="M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1"/><path d="M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1"/>',
+  alert:'<path d="M12 4 2.8 19.5h18.4z"/><path d="M12 10v4.5M12 17.2v.1"/>',
+  plusc:'<circle cx="12" cy="12" r="8.5"/><path d="M12 8.5v7M8.5 12h7"/>',
+  up:'<path d="M7 17 17 7M9 7h8v8"/>',
+  clock:'<circle cx="12" cy="12" r="8.5"/><path d="M12 7.5V12l3 2"/>',
+};
+const G = (n, cls) => `<svg class="g ${cls||""}" viewBox="0 0 24 24" aria-hidden="true">${GLY[n]}</svg>`;
 const IC = {
   home:'<svg class="i" viewBox="0 0 24 24"><path d="M3 10.5 12 3l9 7.5"/><path d="M5 9.5V20h5v-6h4v6h5V9.5"/></svg>',
   chart:'<svg class="i" viewBox="0 0 24 24"><path d="M5 20V11"/><path d="M10 20V5"/><path d="M15 20v-7"/><path d="M20 20V8"/></svg>',
@@ -688,7 +741,7 @@ function renderHome(){
   let h = `<div class="card"><div class="wk-top"><div><div class="wk-lbl">Cette semaine</div>
       <div class="wk-big num">${cur} <span class="of">/ ${goal}</span> séances</div></div><span class="mut">${IC.cal}</span></div>
     <div class="circles">${Array.from({length:goal}, (_,i) => `<div class="circ ${i<cur?"on":""}">${i<cur?IC.check:""}</div>`).join("")}</div>
-    <div class="streak-row"><span>🔥</span><span class="grow">${streak ? `${streak} semaine${streak>1?"s":""} d'affilée` : cur ? `Encore ${Math.max(0,goal-cur)} séance${goal-cur>1?"s":""} pour valider ta semaine` : "Nouvelle semaine, c'est parti"}</span></div></div>`;
+    <div class="streak-row">${G("flame","flame")}<span class="grow">${streak ? `${streak} semaine${streak>1?"s":""} d'affilée` : cur ? `Encore ${Math.max(0,goal-cur)} séance${goal-cur>1?"s":""} pour valider ta semaine` : "Nouvelle semaine, c'est parti"}</span></div></div>`;
 
   if(S.draft){
     const done = S.draft.entries.reduce((a,e) => a + e.sets.filter(s=>s.done).length, 0);
@@ -703,17 +756,17 @@ function renderHome(){
     const tgs = day.ex.map(ex => computeTarget(ex, history(exKey(ex, lastVariant(ex)))[0]));
     tgs.forEach(t => { if(t.type==="load") loads++; else if(t.type==="first" || t.type==="routine") firsts++; else reps++; });
     const teaser = !day.ex.length ? "" : firsts === day.ex.length ? "Première séance : on pose tes repères" :
-      loads ? `🔥 ${loads} exercice${loads>1?"s":""} où tu montes en charge` : `🎯 ${reps} objectif${reps>1?"s":""} de reps à battre`;
+      loads ? `${G("flame")}${loads} exercice${loads>1?"s":""} où tu montes en charge` : `${G("target")}${reps} objectif${reps>1?"s":""} de reps à battre`;
     const ms = new Set(day.ex.flatMap(e => musclesOf(e.name)));
     const totalSets = day.ex.reduce((a,e) => a + (e.unit === "routine" ? 0 : (+e.sets||0)), 0);
     h += `<div class="tabs">${prog.map((d,i) => `<button class="tab ${i===pi?"on":""}" data-a="pick" data-v="${i}">${esc(d.name)}${i===S.config.nextIdx?'<i class="nx"></i>':""}</button>`).join("")}</div>
       <div class="card"><div class="plan-head"><div style="min-width:0">
         <div class="plan-title">${esc(day.name)}<button class="more" data-a="editnav">${IC.pen}</button></div>
-        <div class="plan-sub">${day.ex.length} exercices · ${totalSets} séries</div>
+        <div class="plan-sub">${day.ex.length} exercices, ${totalSets} séries</div>
         ${teaser ? `<div class="teaser">${teaser}</div>` : ""}</div>
         <div class="body-fig">${figure(ms,"front",92)}${figure(ms,"back",92)}</div></div>
       <div class="exlist">${day.ex.map((ex,i) => `<div class="exrow"><div class="tile">${tileFig(ex.name, 46)}</div><div class="grow">
-          <div class="exname">${esc(ex.name)}</div>${hasVar(ex) ? `<div class="exsub">${ex.variants.map((v,j) => j === lastVariant(ex) ? `<b style="color:var(--txt)">${esc(v.name)}</b>` : esc(v.name)).join(" / ")}</div>` : ""}${miniTarget(ex, tgs[i])}${ex.ss && day.ex[i+1] ? `<div class="tg-mini" style="color:var(--acc)">🔗 Superset avec ${esc(day.ex[i+1].name)}</div>` : ""}
+          <div class="exname">${esc(ex.name)}</div>${hasVar(ex) ? `<div class="exsub">${ex.variants.map((v,j) => j === lastVariant(ex) ? `<b style="color:var(--txt)">${esc(v.name)}</b>` : esc(v.name)).join(" / ")}</div>` : ""}${miniTarget(ex, tgs[i])}${ex.ss && day.ex[i+1] ? `<div class="tg-mini goal">${G("link")}Superset avec ${esc(day.ex[i+1].name)}</div>` : ""}
           <div class="pls">${ex.unit === "routine" ? `<span>${ex.min} min</span>` : `<span>${ex.sets} séries</span><span>${ex.min}–${ex.max} ${ex.unit==="sec"?"s":"reps"}</span>`}</div></div></div>`).join("")
         || `<div class="mut small" style="padding:16px 0">Aucun exercice. Ajoute-en avec le crayon.</div>`}</div>
       <button class="btn main" data-a="start" data-v="${pi}">Commencer la séance ${IC.play}</button></div>`;
@@ -721,7 +774,7 @@ function renderHome(){
 
   const pk = programKeys(); const stag = allExercises().filter(e => pk.has(e.id) && stagnation(e.id));
   if(stag.length){
-    h += `<div class="card alert"><div class="h" style="color:var(--org)">⚠️ Stagnation</div>
+    h += `<div class="card alert"><div class="mini-h" style="color:var(--org)">${G("alert")}Stagnation</div>
       ${stag.map(e => `<button class="list-item" data-a="prog" data-v="${esc(e.id)}"><span>${esc(e.name)}</span><span class="badge">3 séances sans progrès</span></button>`).join("")}
       <div class="mut small" style="margin-top:8px">Pistes : vérifie sommeil et calories, baisse de 10 % puis remonte, ou passe sur une fourchette de reps plus haute.</div></div>`;
   }
@@ -730,14 +783,14 @@ function renderHome(){
   const real = S.sessions.filter(s => s.dayId !== "BASE");
   const lastS = real[0];
   h += `<div class="duo">
-    <div class="card"><div class="mini-h">🏆 Records récents</div>${prs.length ? `<div class="mini-v" style="font-size:15px">${esc(prs[0].txt)}</div><div class="mut small" style="margin-top:2px">${esc(prs[0].name)}</div>` : `<div class="mut small">Ton premier record arrive bientôt.</div>`}</div>
-    <div class="card"><div class="mini-h">🕒 Dernière séance</div>${lastS ? `<div class="mini-v" style="font-size:15px">${dayFr(lastS.date)}</div><div class="mut small" style="margin-top:2px">${esc(lastS.dayName)}${lastS.goalsTotal ? " · " + lastS.goalsHit + "/" + lastS.goalsTotal : ""}</div>` : `<div class="mut small">Aucune séance encore.</div>`}</div></div>`;
+    <div class="card"><div class="mini-h">${G("trophy","gold")}Records récents</div>${prs.length ? `<div class="mini-v" style="font-size:15px">${esc(prs[0].txt)}</div><div class="mut small" style="margin-top:2px">${esc(prs[0].name)}</div>` : `<div class="mut small">Ton premier record arrive bientôt.</div>`}</div>
+    <div class="card"><div class="mini-h">${G("clock","blue")}Dernière séance</div>${lastS ? `<div class="mini-v" style="font-size:15px">${dayFr(lastS.date)}</div><div class="mut small" style="margin-top:2px">${esc(lastS.dayName)}${lastS.goalsTotal ? " · " + lastS.goalsHit + "/" + lastS.goalsTotal : ""}</div>` : `<div class="mut small">Aucune séance encore.</div>`}</div></div>`;
 
   h += `<div class="sec-title">Historique</div><div class="card">`;
   if(!S.sessions.length) h += `<div class="mut small">Aucune séance pour l'instant. La première pose les bases : tout ce que tu notes servira à calculer tes prochains objectifs.</div>`;
   else h += S.sessions.slice(0,8).map(s => `<button class="list-item" data-a="detail" data-v="${esc(s.id)}">
       <span><b>${esc(s.dayName)}</b> <span class="mut small">· ${dayFr(s.date)}</span></span>
-      <span style="display:flex;gap:6px;align-items:center">${s.prs && s.prs.length ? `<span class="badge">🏆 ${s.prs.length}</span>` : ""}${s.goalsTotal ? `<span class="badge lime">${s.goalsHit}/${s.goalsTotal}</span>` : ""}${IC.chev}</span></button>`).join("");
+      <span style="display:flex;gap:6px;align-items:center">${s.prs && s.prs.length ? `<span class="badge">${G("trophy")}${s.prs.length}</span>` : ""}${s.goalsTotal ? `<span class="badge lime">${s.goalsHit}/${s.goalsTotal}</span>` : ""}${IC.chev}</span></button>`).join("");
   h += `</div>`;
   return h;
 }
@@ -755,15 +808,15 @@ function renderWorkout(){
     const u = e.unit === "sec" ? "s" : e.unit === "routine" ? " min" : "";
     const stag = stagnation(e.exId);
     const prevE = d.entries[ei-1], nextE = d.entries[ei+1];
-    if(prevE && prevE.ss) h += `<div class="ssdiv">🔗 SUPERSET</div>`;
+    if(prevE && prevE.ss) h += `<div class="ssdiv">${G("link")}Superset, enchaîne sans repos</div>`;
     h += `<div class="card${e.ss && nextE ? " ss-top" : ""}"><div class="exhead"><div class="tile sm">${tileFig(e.baseName || e.name, 38)}</div>
-      <div class="grow"><div class="exname">${esc(e.baseName || e.name)}</div><div class="exsub">${e.unit === "routine" ? e.min + " min" : `${e.nSets} séries · ${e.min}–${e.max} ${e.unit==="sec"?"s":"reps"}`}${stag ? ` · <span style="color:var(--org)">stagne</span>` : ""}</div></div>
+      <div class="grow"><div class="exname">${esc(e.baseName || e.name)}</div><div class="exsub">${e.unit === "routine" ? e.min + " min" : `${e.nSets} séries de ${e.min} à ${e.max} ${e.unit==="sec"?"s":"reps"}`}${stag ? `, <span style="color:var(--org)">stagne</span>` : ""}</div></div>
       <button class="editbtn" data-a="exedit" data-e="${ei}">${IC.pen}</button></div>
       ${e.variants ? `<div class="seg">${e.variants.map((v,i) => `<button class="${i===e.vi?"on":""}" data-a="variant" data-e="${ei}" data-v="${i}">${esc(v.name)}</button>`).join("")}</div>` : ""}
       ${e.note ? `<div class="ex-note">${esc(e.note)}</div>` : ""}
       ${last ? `<div class="last">Dernière fois : ${last.sets.map(s => (s.w ? fmt(s.w)+" × " : "") + s.r + u).join(" · ")} <span class="mut small">(${dateFr(last.date)})</span></div>` : ""}
       <div class="target ${e.target.type}">${targetText(e, e.target)}</div>
-      ${e.unit === "routine" ? `<div class="sets">${e.sets.map((s, si) => `<div class="set ${s.done?"done":""}" style="grid-template-columns:22px 1fr 40px"><div class="idx">⏱</div>
+      ${e.unit === "routine" ? `<div class="sets">${e.sets.map((s, si) => `<div class="set ${s.done?"done":""}" style="grid-template-columns:22px 1fr 40px"><div class="idx">${G("timer")}</div>
           <div class="stp"><button data-a="st" data-e="${ei}" data-s="${si}" data-f="r" data-d="-1">−</button><input inputmode="numeric" data-in="r" data-e="${ei}" data-s="${si}" value="${s.r}"><span class="mut small" style="margin-right:6px">min</span><button data-a="st" data-e="${ei}" data-s="${si}" data-f="r" data-d="1">+</button></div>
           <button class="chk" data-a="chk" data-e="${ei}" data-s="${si}">${IC.check}</button></div>`).join("")}</div>` : `<div class="sets">${e.sets.map((s, si) => {
         const t = e.target.sets && e.target.sets[si];
@@ -812,8 +865,8 @@ function renderProgress(){
   const real = S.sessions.filter(s => s.dayId !== "BASE").length;
   let h = `<div class="page-title"><h1>Progrès</h1><span class="mut">${IC.chart}</span></div>
     <div class="grid2" style="margin-bottom:16px">
-      <div class="stat"><div class="ico">🏋️</div><div class="l">Séances au total</div><div class="v">${real}</div></div>
-      <div class="stat"><div class="ico">⭐</div><div class="l">Records (30 j)</div><div class="v">${monthPR}</div></div></div>
+      <div class="stat"><div class="ico blue">${G("dumbbell")}</div><div class="l">Séances au total</div><div class="v">${real}</div></div>
+      <div class="stat"><div class="ico gold">${G("star")}</div><div class="l">Records (30 j)</div><div class="v">${monthPR}</div></div></div>
     <div class="sec-title">Séances par semaine</div>
     <div class="card"><div class="bars">${weeks.map(w => `<div class="${w.n>=goal?"ok":w.n?"has":""}" style="height:${Math.max(5, w.n/maxN*100)}%"><span>S${weekNum(w.ws)}</span></div>`).join("")}</div></div>`;
 
@@ -827,8 +880,8 @@ function renderProgress(){
     const pts = hist.slice().reverse().map(e => ({v: entryBest(e), d: e.date}));
     const best = Math.max(...pts.map(p => p.v)), first = pts[0].v;
     const gain = first ? (best/first - 1) * 100 : 0;
-    h += `<div class="card"><div class="best"><span class="tro">🏆</span><div><div class="mut small">${isSec?"Meilleur temps":"Meilleur 1RM estimé"}</div>
-        <div class="v">${fmt(Math.round(best*2)/2)} ${isSec?"s":"kg"}</div><div class="up">↗ ${gain>=0?"+":""}${fmt(Math.round(gain))} % depuis le début</div></div></div></div>
+    h += `<div class="card"><div class="best"><span class="tro">${G("trophy")}</span><div><div class="mut small">${isSec?"Meilleur temps":"Meilleur 1RM estimé"}</div>
+        <div class="v">${fmt(Math.round(best*2)/2)} ${isSec?"s":"kg"}</div><div class="up">${G("up")}${gain>=0?"+":""}${fmt(Math.round(gain))} % depuis le début</div></div></div></div>
       ${stagnation(ex.id) ? `<div class="target hold" style="margin:-4px 0 16px">Stagnation sur les 3 dernières séances</div>` : ""}
       <div class="sec-title">Progression (${isSec?"temps":"1RM estimé"})</div>
       <div class="card">${lineChart(pts, isSec?"s":"kg")}</div>
@@ -902,15 +955,15 @@ function renderLayer(){
     const s = S.modal.session, pv = S.modal.prevVol;
     const dv = pv ? Math.round((s.volume/pv - 1)*100) : null;
     const msg = s.prs.length ? "Tu viens de battre des records. Voilà comment on progresse." :
-      s.goalsTotal && s.goalsHit === s.goalsTotal ? "Tous les objectifs atteints. Charge en hausse la prochaine fois 🔥" :
+      s.goalsTotal && s.goalsHit === s.goalsTotal ? "Tous les objectifs atteints. Les charges montent la prochaine fois." :
       s.goalsHit ? "Des objectifs atteints, les autres tomberont à la prochaine." : "Séance faite, c'est ça qui compte. On progresse sur la durée.";
-    h += `<div class="ov"><div class="sheet full"><div class="done-hero"><div class="ring">${IC.check}</div><div class="t">Séance terminée 💪</div><div class="m">${esc(s.dayName)} · ${msg}</div></div>
+    h += `<div class="ov"><div class="sheet full"><div class="done-hero"><div class="ring">${IC.check}</div><div class="t">${esc(s.dayName)} terminé</div><div class="m">${msg}</div></div>
       <div class="grid2">
-        <div class="stat"><div class="ico">🎯</div><div class="l">Objectifs atteints</div><div class="v">${s.goalsTotal ? s.goalsHit+" / "+s.goalsTotal : "—"}</div></div>
-        <div class="stat"><div class="ico">🏆</div><div class="l">Records</div><div class="v">${s.prs.length}</div></div>
-        <div class="stat"><div class="ico">⏱️</div><div class="l">Séries · Durée</div><div class="v" style="font-size:19px">${s.sets} série${s.sets>1?"s":""} · ${s.durationMin} min</div></div>
-        <div class="stat"><div class="ico">📊</div><div class="l">Volume</div><div class="v">${dv===null ? fmt(Math.round(s.volume/100)/10)+" t" : (dv>=0?"+":"")+dv+" %"}</div><div class="sub">${dv===null ? "soulevé" : "vs la dernière fois"}</div></div></div>
-      ${s.prs.length ? `<div class="card" style="margin-top:16px"><div class="mini-h" style="color:var(--acc)">↗ Nouveaux records</div>${s.prs.map(p => `<div class="pr-row"><div style="flex:1;font-weight:600">${esc(p.name)}</div><div style="font-weight:700">${esc(p.txt)}</div></div>`).join("")}</div>` : ""}
+        <div class="stat"><div class="ico blue">${G("target")}</div><div class="l">Objectifs atteints</div><div class="v">${s.goalsTotal ? s.goalsHit+" / "+s.goalsTotal : "—"}</div></div>
+        <div class="stat"><div class="ico gold">${G("trophy")}</div><div class="l">Records</div><div class="v">${s.prs.length}</div></div>
+        <div class="stat"><div class="ico blue">${G("timer")}</div><div class="l">Durée</div><div class="v">${s.durationMin} min</div><div class="sub">${s.sets} série${s.sets>1?"s":""}</div></div>
+        <div class="stat"><div class="ico blue">${G("bars")}</div><div class="l">Volume</div><div class="v">${dv===null ? fmt(Math.round(s.volume/100)/10)+" t" : (dv>=0?"+":"")+dv+" %"}</div><div class="sub">${dv===null ? "soulevé" : "vs la dernière fois"}</div></div></div>
+      ${s.prs.length ? `<div class="card" style="margin-top:16px"><div class="mini-h">${G("trophy","gold")}Nouveaux records</div>${s.prs.map(p => `<div class="pr-row"><div style="flex:1;font-weight:600">${esc(p.name)}</div><div style="font-weight:700">${esc(p.txt)}</div></div>`).join("")}</div>` : ""}
       <button class="btn main" style="margin-top:20px" data-a="closemodal">Fermer</button></div></div>`;
   }
   if(S.modal && S.modal.type === "detail"){
@@ -941,7 +994,8 @@ function renderLayer(){
       <button class="btn danger sm" style="margin-top:8px" data-a="exdel">${S.confirm==="exdel" ? "Confirmer : supprimer du programme" : "Supprimer du programme"}</button>`}
       <button class="btn ghost sm" style="margin-top:8px" data-a="closemodal">Annuler</button></div></div>`;
   }
-  if(S.toast) h += `<div class="toast" style="${S.toast.warn?"background:var(--org)":""}">${esc(S.toast.msg)}</div>`;
+  if(S.toast){ const k = S.toast.warn ? "warn" : (S.toast.kind || ""); const ic = {pr:"trophy", ok:null, link:"link", warn:"alert"}[k];
+    h += `<div class="toast ${k}">${k === "ok" ? IC.check : ic ? G(ic) : ""}<span>${esc(S.toast.msg)}</span></div>`; }
   layer.innerHTML = h;
 }
 
@@ -999,7 +1053,7 @@ document.addEventListener("click", ev => {
         if(day) day.ex.push(ex);
         S.draft.entries.push(makeEntry(ex, 0));
       }
-      saveConfig(); saveDraft(); S.modal = null; showToast("Enregistré ✅"); break;
+      saveConfig(); saveDraft(); S.modal = null; showToast("Enregistré", false, "ok"); break;
     }
     case "variant": {
       const e = S.draft.entries[ei], i = +v; if(i === e.vi) break;
@@ -1041,12 +1095,12 @@ document.addEventListener("click", ev => {
     case "setnext": S.config.nextIdx = +v; saveConfig(); break;
     case "claude": {
       const txt = claudeSummary();
-      navigator.clipboard.writeText(txt).then(() => showToast("Copié ✅ Colle-le dans Claude"), () => { S.importText = txt; render(); showToast("Copie bloquée : sélectionne le texte ci-dessous", true); });
+      navigator.clipboard.writeText(txt).then(() => showToast("Copié, colle-le dans Claude", false, "ok"), () => { S.importText = txt; render(); showToast("Copie bloquée : sélectionne le texte ci-dessous", true); });
       return;
     }
     case "export": {
       const txt = JSON.stringify({app:"gymtracker", v:1, config:S.config, sessions:S.sessions});
-      navigator.clipboard.writeText(txt).then(() => showToast("Sauvegarde copiée ✅"), () => { S.importText = txt; render(); showToast("Copie bloquée : sélectionne le texte ci-dessous", true); });
+      navigator.clipboard.writeText(txt).then(() => showToast("Sauvegarde copiée", false, "ok"), () => { S.importText = txt; render(); showToast("Copie bloquée : sélectionne le texte ci-dessous", true); });
       return;
     }
     case "import": {
@@ -1059,7 +1113,7 @@ document.addEventListener("click", ev => {
       data.sessions.forEach(s => writeDoc("sessions/" + s.id, s));
       S.sessions = data.sessions.slice().sort((a,b) => b.date - a.date);
       S.config = normConfig(data.config); saveConfig(); S.importText = "";
-      showToast("Sauvegarde restaurée ✅"); break;
+      showToast("Sauvegarde restaurée", false, "ok"); break;
     }
   }
   render();
