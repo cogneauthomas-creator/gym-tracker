@@ -145,6 +145,14 @@ textarea{min-height:120px;font-size:12px;font-family:ui-monospace,monospace}
 .daybar{display:flex;gap:8px;align-items:center}
 .daybar input{font-weight:700}
 .next-title{font-weight:800;font-size:32px;letter-spacing:-.5px;margin:2px 0 6px}
+.seg{display:flex;background:var(--card2);border-radius:12px;padding:3px;margin-top:12px;gap:3px}
+.seg button{flex:1;padding:8px 6px;border-radius:10px;font-weight:600;font-size:14px;color:var(--mut)}
+.seg button.on{background:#3a3b42;color:var(--txt)}
+.card.ss-top{margin-bottom:4px;border-bottom-left-radius:8px;border-bottom-right-radius:8px;box-shadow:inset 3px 0 0 var(--acc)}
+.card.ss-bot{border-top-left-radius:8px;border-top-right-radius:8px;box-shadow:inset 3px 0 0 var(--acc)}
+.sstag{display:inline-block;margin-top:10px;font-size:12px;font-weight:700;color:var(--acc);background:#10263f;padding:5px 10px;border-radius:99px}
+.chkrow{display:flex;align-items:center;gap:10px;margin-top:14px;font-size:15px}
+.chkrow input{width:22px;height:22px;flex:none}
 .exhead{display:grid;grid-template-columns:48px 1fr auto;gap:12px;align-items:center}
 </style>
 </head>
@@ -208,13 +216,29 @@ function normConfig(c){
   const d = defaultConfig();
   if(!c || !Array.isArray(c.program) || !c.program.length) return d;
   return { program:c.program, nextIdx: Number.isInteger(c.nextIdx) ? c.nextIdx % c.program.length : 0,
-    weeklyGoal: c.weeklyGoal || 4, restSec: c.restSec || 90 };
+    weeklyGoal: c.weeklyGoal || 4, restSec: c.restSec || 90, patches: c.patches || [] };
 }
 function loadLocal(){
   try{ const d = JSON.parse(localStorage.getItem(LS_KEY) || "null");
     if(d){ S.config = d.config ? normConfig(d.config) : null; S.sessions = d.sessions || []; S.draft = d.draft || null; }
   }catch(e){}
   if(!S.config){ const sd = SEED; S.config = normConfig(clone(sd.config)); S.sessions = clone(sd.sessions); saveLocal(); }
+  applyPatches();
+}
+function applyPatches(){
+  const c = S.config; c.patches = c.patches || [];
+  if(!c.patches.includes("v2")){
+    c.program.forEach(d => {
+      const m = d.ex.find(x => x.id === "dev_militaire");
+      if(m && !m.variants) m.variants = [{id:"halt", name:"Haltères"}, {id:"machine", name:"Machine (disques)"}];
+      const ti = d.ex.findIndex(x => x.id === "tri_poulie");
+      if(ti >= 0 && !d.ex.some(x => x.id === "tri_poulie_basse")){
+        Object.assign(d.ex[ti], {name:"Triceps poulie haute (courte portion)", ss:true});
+        d.ex.splice(ti+1, 0, {id:"tri_poulie_basse", name:"Triceps poulie basse (longue portion)", sets:d.ex[ti].sets, min:6, max:12, inc:2.5, unit:"reps", note:"Poulie au niveau du nombril, jusqu'à l'échec"});
+      }
+    });
+    c.patches.push("v2"); saveLocal();
+  }
 }
 function saveLocal(){ try{ localStorage.setItem(LS_KEY, JSON.stringify({config:S.config, sessions:S.sessions, draft:S.draft})); }catch(e){} }
 
@@ -313,7 +337,10 @@ function stagnation(exId){
 }
 function allExercises(){
   const m = new Map();
-  S.config.program.forEach(d => d.ex.forEach(e => { if(!m.has(e.id)) m.set(e.id, e); }));
+  S.config.program.forEach(d => d.ex.forEach(e => {
+    if(hasVar(e)) e.variants.forEach((v,i) => { const k = exKey(e,i); if(!m.has(k)) m.set(k, {id:k, name:exLabel(e,i), unit:e.unit}); });
+    else if(!m.has(e.id)) m.set(e.id, e);
+  }));
   S.sessions.forEach(s => (s.entries||[]).forEach(e => { if(!m.has(e.exId)) m.set(e.exId, {id:e.exId, name:e.name, unit:e.unit}); }));
   return [...m.values()];
 }
@@ -371,27 +398,41 @@ function miniTarget(ex, tg){
 }
 const ICON_CLIP = `<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="4" width="14" height="17" rx="2"/><path d="M9 4V3h6v1"/><path d="M9 11h6M9 15h4"/></svg>`;
 
+/* ================= VARIANTES & SUPERSETS ================= */
+const hasVar = ex => !!(ex.variants && ex.variants.length);
+function exKey(ex, vi){ return hasVar(ex) ? ex.id + "~" + ex.variants[Math.min(vi||0, ex.variants.length-1)].id : ex.id; }
+function exLabel(ex, vi){ return hasVar(ex) ? ex.name + " · " + ex.variants[Math.min(vi||0, ex.variants.length-1)].name : ex.name; }
+function lastVariant(ex){
+  if(!hasVar(ex)) return 0;
+  for(const s of S.sessions) for(const e of (s.entries||[])){ const i = ex.variants.findIndex(v => ex.id + "~" + v.id === e.exId); if(i >= 0) return i; }
+  return 0;
+}
+function programKeys(){ const k = new Set(); S.config.program.forEach(d => d.ex.forEach(ex => { if(hasVar(ex)) ex.variants.forEach((v,i) => k.add(exKey(ex,i))); else k.add(ex.id); })); return k; }
+function makeEntry(ex, vi){
+  const id = exKey(ex, vi), last = history(id)[0], tg = computeTarget(ex, last);
+  const sets = [];
+  for(let i=0;i<ex.sets;i++){ const t = tg.sets ? tg.sets[i] : null; sets.push({ w: t ? t.w : 0, r: t ? t.r : ex.min, done:false }); }
+  return { exId:id, baseId:ex.id, vi:vi||0, variants: hasVar(ex) ? clone(ex.variants) : null, name: exLabel(ex, vi), baseName: ex.name,
+    unit:ex.unit, min:ex.min, max:ex.max, inc:ex.inc, note:ex.note||"", nSets:ex.sets, ss: !!ex.ss, target: tg, sets, feel:null };
+}
+function parseVariants(str, old){
+  const names = String(str||"").split(",").map(s => s.trim()).filter(Boolean);
+  if(names.length < 2) return null;
+  return names.map(n => { const o = (old||[]).find(v => v.name.toLowerCase() === n.toLowerCase()); return o ? {id:o.id, name:n} : {id:"v" + uid().slice(-6), name:n}; });
+}
+
 /* ================= SÉANCE ================= */
 function startWorkout(dayIdx){
   const day = S.config.program[dayIdx];
   S.draft = { dayIdx, dayId:day.id, dayName:day.name, start:Date.now(),
-    entries: day.ex.map(ex => {
-      const last = history(ex.id)[0];
-      const tg = computeTarget(ex, last);
-      const sets = [];
-      for(let i=0;i<ex.sets;i++){
-        const t = tg.sets ? tg.sets[i] : null;
-        sets.push({ w: t ? t.w : 0, r: t ? t.r : ex.min, done:false });
-      }
-      return { exId:ex.id, name:ex.name, unit:ex.unit, min:ex.min, max:ex.max, inc:ex.inc, note:ex.note||"", nSets:ex.sets,
-        target: tg, sets, feel:null };
-    })
+    entries: day.ex.map(ex => makeEntry(ex, lastVariant(ex)))
   };
   S.view = "workout"; S.pickIdx = null; saveDraft(); render(); window.scrollTo(0,0);
 }
 function checkSet(ei, si){
   const e = S.draft.entries[ei], s = e.sets[si];
   s.done = !s.done;
+  let toasted = false;
   if(s.done){
     // record ?
     const h = history(e.exId);
@@ -401,11 +442,13 @@ function checkSet(ei, si){
       const others = e.sets.filter((x,i) => x.done && i !== si);
       const curBestOthers = Math.max(0, ...others.map(x => e.unit === "sec" ? x.r : (e1rm(x.w,x.r) || x.r)));
       const val = e.unit === "sec" ? s.r : (e1rm(s.w, s.r) || s.r);
-      if(s.w > prevMaxW && s.w > Math.max(0, ...others.map(x => x.w))) showToast(`🏆 Record de charge : ${fmt(s.w)} kg !`);
-      else if(val > prevBest && val > curBestOthers) showToast(e.unit === "sec" ? `🏆 Record : ${s.r} s !` : `🏆 Record ! 1RM estimé ${fmt(Math.round(val*2)/2)} kg`);
-      else if(e.target.sets && e.target.sets[si] && s.w >= e.target.sets[si].w && s.r >= e.target.sets[si].r) showToast("✅ Objectif de la série atteint");
+      if(s.w > prevMaxW && s.w > Math.max(0, ...others.map(x => x.w))) toasted = true, showToast(`🏆 Record de charge : ${fmt(s.w)} kg !`);
+      else if(val > prevBest && val > curBestOthers) toasted = true, showToast(e.unit === "sec" ? `🏆 Record : ${s.r} s !` : `🏆 Record ! 1RM estimé ${fmt(Math.round(val*2)/2)} kg`);
+      else if(e.target.sets && e.target.sets[si] && s.w >= e.target.sets[si].w && s.r >= e.target.sets[si].r) toasted = true, showToast("✅ Objectif de la série atteint");
     }
-    startTimer();
+    const nxt = S.draft.entries[ei+1];
+    if(e.ss && nxt){ stopTimer(); if(!toasted) showToast("➡️ Enchaîne direct : " + (nxt.baseName || nxt.name)); }
+    else startTimer();
   }
   saveDraft(); render();
 }
@@ -517,7 +560,7 @@ function renderHome(){
     let pi = S.pickIdx; if(!(pi >= 0 && pi < prog.length)) pi = S.config.nextIdx;
     const day = prog[pi];
     let loads = 0, reps = 0, firsts = 0;
-    const tgs = day.ex.map(ex => computeTarget(ex, history(ex.id)[0]));
+    const tgs = day.ex.map(ex => computeTarget(ex, history(exKey(ex, lastVariant(ex)))[0]));
     tgs.forEach(t => { if(t.type==="load") loads++; else if(t.type==="first") firsts++; else reps++; });
     const teaser = !day.ex.length ? "" : firsts === day.ex.length ? "Première séance : on pose tes repères" :
       loads ? `🔥 ${loads} exercice${loads>1?"s":""} où tu montes en charge` : `🎯 ${reps} objectif${reps>1?"s":""} de reps à battre`;
@@ -530,13 +573,13 @@ function renderHome(){
         ${teaser ? `<div class="small" style="margin-top:8px;color:var(--lime);font-weight:600">${teaser}</div>` : ""}</div>
         <div class="body-fig">${figure(ms,"front",96)}${figure(ms,"back",96)}</div></div>
       <div class="exlist">${day.ex.map((ex,i) => `<div class="exrow"><div class="tile">${tileFig(ex.name, 54)}</div><div style="min-width:0">
-          <div class="exname">${esc(ex.name)}</div>${miniTarget(ex, tgs[i])}
+          <div class="exname">${esc(ex.name)}</div>${hasVar(ex) ? `<div class="exsub">${ex.variants.map((v,j) => j === lastVariant(ex) ? `<b style="color:var(--txt)">${esc(v.name)}</b>` : esc(v.name)).join(" / ")}</div>` : ""}${miniTarget(ex, tgs[i])}${ex.ss && day.ex[i+1] ? `<div class="tg-mini" style="color:var(--acc)">🔗 Superset avec ${esc(day.ex[i+1].name)}</div>` : ""}
           <div class="pls"><span>${ex.sets} séries</span><span>${ex.min}–${ex.max} ${ex.unit==="sec"?"s":"reps"}</span></div></div></div>`).join("")
         || `<div class="mut small" style="padding:16px 0">Aucun exercice. Ajoute-en avec •••</div>`}</div>
       <button class="btn main" data-a="start" data-v="${pi}">${ICON_CLIP} Commencer la séance</button></div>`;
   }
 
-  const stag = allExercises().filter(e => S.config.program.some(d => d.ex.some(x => x.id === e.id)) && stagnation(e.id));
+  const pk = programKeys(); const stag = allExercises().filter(e => pk.has(e.id) && stagnation(e.id));
   if(stag.length){
     h += `<div class="card alert"><div class="h" style="color:var(--org)">⚠️ Stagnation</div>
       ${stag.map(e => `<button class="list-item" data-a="prog" data-v="${esc(e.id)}"><span>${esc(e.name)}</span><span class="badge">3 séances sans progrès</span></button>`).join("")}
@@ -570,9 +613,13 @@ function renderWorkout(){
     const last = history(e.exId)[0];
     const u = e.unit === "sec" ? "s" : "";
     const stag = stagnation(e.exId);
-    h += `<div class="card"><div class="exhead"><div class="tile sm">${tileFig(e.name, 42)}</div>
-      <div style="min-width:0"><div class="exname">${esc(e.name)}</div><div class="exsub">${e.nSets} séries · ${e.min}–${e.max} ${e.unit==="sec"?"s":"reps"}${stag ? ` · <span style="color:var(--org)">stagne</span>` : ""}</div></div>
+    const prevE = d.entries[ei-1], nextE = d.entries[ei+1];
+    const ssCls = (e.ss && nextE ? " ss-top" : "") + (prevE && prevE.ss ? " ss-bot" : "");
+    h += `<div class="card${ssCls}"><div class="exhead"><div class="tile sm">${tileFig(e.baseName || e.name, 42)}</div>
+      <div style="min-width:0"><div class="exname">${esc(e.baseName || e.name)}</div><div class="exsub">${e.nSets} séries · ${e.min}–${e.max} ${e.unit==="sec"?"s":"reps"}${stag ? ` · <span style="color:var(--org)">stagne</span>` : ""}</div></div>
       <button class="editbtn" data-a="exedit" data-e="${ei}">✏️</button></div>
+      ${e.variants ? `<div class="seg">${e.variants.map((v,i) => `<button class="${i===e.vi?"on":""}" data-a="variant" data-e="${ei}" data-v="${i}">${esc(v.name)}</button>`).join("")}</div>` : ""}
+      ${e.ss && nextE ? `<div class="sstag">🔗 SUPERSET · enchaîne avec ${esc(nextE.baseName || nextE.name)}</div>` : ""}
       ${e.note ? `<div class="ex-note">${esc(e.note)}</div>` : ""}
       ${last ? `<div class="last">Dernière fois (${dateFr(last.date)}) : ${last.sets.map(s => (s.w ? fmt(s.w)+"×" : "") + s.r + u).join(" · ")}</div>` : ""}
       <div class="target ${e.target.type}">${targetText(e, e.target)}</div>
@@ -736,6 +783,8 @@ function renderLayer(){
         <div><label class="fl">Reps min</label><input inputmode="numeric" data-in="me" data-f="min" value="${f.min}"></div>
         <div><label class="fl">Reps max</label><input inputmode="numeric" data-in="me" data-f="max" value="${f.max}"></div></div>
       <label class="fl">Note (facultatif)</label><input data-in="me" data-f="note" value="${esc(f.note||"")}">
+      <label class="fl">Variantes (facultatif, séparées par des virgules)</label><input data-in="me" data-f="variants" placeholder="ex : Haltères, Machine" value="${esc(f.variants||"")}">
+      <label class="chkrow"><input type="checkbox" data-in="me" data-f="ss" ${f.ss?"checked":""}> Superset : enchaîner avec l'exercice suivant</label>
       <div class="mut small" style="margin:10px 0">${isNew ? "Il sera ajouté à cette séance et au programme." : "Les changements s'appliquent au programme. Renommer garde ton historique."}</div>
       <button class="btn main sm" data-a="exsave">Enregistrer</button>
       ${isNew ? "" : `<button class="btn ghost sm" style="margin-top:8px" data-a="exskip">Retirer de cette séance seulement</button>
@@ -777,8 +826,8 @@ document.addEventListener("click", ev => {
       e.sets.splice(k >= 0 ? k : e.sets.length-1, 1); saveDraft(); break;
     }
     case "exedit": { const e = S.draft.entries[ei];
-      S.modal = {type:"exedit", ei, f:{name:e.name, sets:e.nSets, min:e.min, max:e.max, inc:e.inc, note:e.note||"", unit:e.unit}}; break; }
-    case "exadd": S.modal = {type:"exedit", ei:-1, f:{name:"", sets:3, min:8, max:12, inc:2.5, note:"", unit:"reps"}}; break;
+      S.modal = {type:"exedit", ei, f:{name:e.baseName || e.name, sets:e.nSets, min:e.min, max:e.max, inc:e.inc, note:e.note||"", unit:e.unit, variants:(e.variants||[]).map(v => v.name).join(", "), ss:!!e.ss}}; break; }
+    case "exadd": S.modal = {type:"exedit", ei:-1, f:{name:"", sets:3, min:8, max:12, inc:2.5, note:"", unit:"reps", variants:"", ss:false}}; break;
     case "exsave": {
       const f = S.modal.f, name = String(f.name).trim();
       if(!name){ showToast("Donne un nom à l'exercice", true); return; }
@@ -786,25 +835,34 @@ document.addEventListener("click", ev => {
       const sets = Math.max(1, Math.min(10, f.sets|0));
       const day = S.config.program[S.draft.dayIdx];
       if(S.modal.ei >= 0){
-        const e = S.draft.entries[S.modal.ei];
-        Object.assign(e, {name, nSets:sets, min:f.min, max:f.max, inc:f.inc, note:f.note});
-        while(e.sets.length < sets){ const l = e.sets[e.sets.length-1]; e.sets.push({w:l.w, r:l.r, done:false}); }
-        while(e.sets.length > sets && !e.sets[e.sets.length-1].done) e.sets.pop();
-        const px = day && day.ex.find(x => x.id === e.exId);
-        if(px) Object.assign(px, {name, sets, min:f.min, max:f.max, inc:f.inc, note:f.note});
+        const ei2 = S.modal.ei, e = S.draft.entries[ei2];
+        let px = day && day.ex.find(x => x.id === (e.baseId || e.exId));
+        if(!px){ px = {id:e.baseId || e.exId, unit:e.unit}; }
+        const vars = parseVariants(f.variants, px.variants);
+        Object.assign(px, {name, sets, min:f.min, max:f.max, inc:f.inc, note:f.note, ss:!!f.ss});
+        if(vars) px.variants = vars; else delete px.variants;
+        if(!e.sets.some(s => s.done)) S.draft.entries[ei2] = makeEntry(px, vars ? Math.min(e.vi||0, vars.length-1) : 0);
+        else Object.assign(e, {baseName:name, name:exLabel(px, e.vi||0), nSets:sets, min:f.min, max:f.max, inc:f.inc, note:f.note, ss:!!f.ss});
       } else {
-        const id = "ex_" + uid();
-        if(day) day.ex.push({id, name, sets, min:f.min, max:f.max, inc:f.inc, unit:"reps", note:f.note});
-        S.draft.entries.push({exId:id, name, unit:"reps", min:f.min, max:f.max, inc:f.inc, note:f.note, nSets:sets,
-          target:{type:"first", sets:null}, sets:Array.from({length:sets}, () => ({w:0, r:f.min, done:false})), feel:null});
+        const ex = {id:"ex_" + uid(), name, sets, min:f.min, max:f.max, inc:f.inc, unit:"reps", note:f.note, ss:!!f.ss};
+        const vars = parseVariants(f.variants, null); if(vars) ex.variants = vars;
+        if(day) day.ex.push(ex);
+        S.draft.entries.push(makeEntry(ex, 0));
       }
       saveConfig(); saveDraft(); S.modal = null; showToast("Enregistré ✅"); break;
+    }
+    case "variant": {
+      const e = S.draft.entries[ei], i = +v; if(i === e.vi) break;
+      if(e.sets.some(s => s.done)){ showToast("Décoche tes séries avant de changer de variante", true); return; }
+      const day = S.config.program[S.draft.dayIdx], px = day && day.ex.find(x => x.id === e.baseId);
+      if(!px) break;
+      S.draft.entries[ei] = makeEntry(px, i); saveDraft(); break;
     }
     case "exskip": S.draft.entries.splice(S.modal.ei, 1); saveDraft(); S.modal = null; break;
     case "exdel": {
       if(S.confirm !== "exdel"){ S.confirm = "exdel"; break; }
       const e = S.draft.entries[S.modal.ei], day = S.config.program[S.draft.dayIdx];
-      if(day) day.ex = day.ex.filter(x => x.id !== e.exId);
+      if(day) day.ex = day.ex.filter(x => x.id !== (e.baseId || e.exId));
       S.draft.entries.splice(S.modal.ei, 1);
       saveConfig(); saveDraft(); S.modal = null; S.confirm = null; showToast("Supprimé du programme"); break;
     }
@@ -862,7 +920,8 @@ document.addEventListener("input", ev => {
     const n = num(el.value); if(!isNaN(n)){ s[k] = Math.max(0, k === "r" ? Math.round(n) : n); saveLocal(); }
   } else if(k === "me"){
     const f = el.dataset.f;
-    if(f === "name" || f === "note") S.modal.f[f] = el.value;
+    if(f === "ss") S.modal.f.ss = el.checked;
+    else if(f === "name" || f === "note" || f === "variants") S.modal.f[f] = el.value;
     else { const n = num(el.value); if(!isNaN(n)) S.modal.f[f] = f === "inc" ? Math.max(0, n) : Math.max(0, Math.round(n)); }
   } else if(k === "import") S.importText = el.value;
   else if(k === "pday") S.editProg[+el.dataset.d].name = el.value;
