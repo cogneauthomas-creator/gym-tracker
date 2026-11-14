@@ -239,6 +239,17 @@ function applyPatches(){
     });
     c.patches.push("v2"); saveLocal();
   }
+  if(!c.patches.includes("v3")){
+    // Repères du développé militaire : 24 kg = haltères ; machine = 2 × 20 kg (40 au total)
+    S.sessions.forEach(s => { if(s.id === "reperes-sept") (s.entries||[]).forEach(e => { if(e.exId === "dev_militaire"){ e.exId = "dev_militaire~halt"; e.name = "Développé militaire · Haltères"; } }); });
+    c.program.forEach(d => d.ex.forEach(x => {
+      if(x.id === "dev_militaire" && x.variants){
+        const m = x.variants.find(v => v.id === "machine"); if(m) m.startW = 40;
+        x.note = "Assis, dos calé. Machine : note le total (2 × 20 kg = 40)";
+      }
+    }));
+    c.patches.push("v3"); saveLocal();
+  }
 }
 function saveLocal(){ try{ localStorage.setItem(LS_KEY, JSON.stringify({config:S.config, sessions:S.sessions, draft:S.draft})); }catch(e){} }
 
@@ -410,8 +421,9 @@ function lastVariant(ex){
 function programKeys(){ const k = new Set(); S.config.program.forEach(d => d.ex.forEach(ex => { if(hasVar(ex)) ex.variants.forEach((v,i) => k.add(exKey(ex,i))); else k.add(ex.id); })); return k; }
 function makeEntry(ex, vi){
   const id = exKey(ex, vi), last = history(id)[0], tg = computeTarget(ex, last);
+  const startW = (hasVar(ex) ? ex.variants[Math.min(vi||0, ex.variants.length-1)].startW : ex.startW) || 0;
   const sets = [];
-  for(let i=0;i<ex.sets;i++){ const t = tg.sets ? tg.sets[i] : null; sets.push({ w: t ? t.w : 0, r: t ? t.r : ex.min, done:false }); }
+  for(let i=0;i<ex.sets;i++){ const t = tg.sets ? tg.sets[i] : null; sets.push({ w: t ? t.w : startW, r: t ? t.r : ex.min, done:false }); }
   return { exId:id, baseId:ex.id, vi:vi||0, variants: hasVar(ex) ? clone(ex.variants) : null, name: exLabel(ex, vi), baseName: ex.name,
     unit:ex.unit, min:ex.min, max:ex.max, inc:ex.inc, note:ex.note||"", nSets:ex.sets, ss: !!ex.ss, target: tg, sets, feel:null };
 }
